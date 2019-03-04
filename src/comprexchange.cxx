@@ -23,6 +23,7 @@ namespace comprEx {
   void
   MyClass::printMessage() const
   {
+    // a test comment added, to check how .gitignore works
     std::cout << "The message is: " << _myMsg << std::endl; 
   }
 
