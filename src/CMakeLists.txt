@@ -13,11 +13,8 @@ target_include_directories (ComprEx
 
 ## dms install the library, just an example, leave it for later on
 ## 'make install' to the correct locations (provided by GNUInstallDirs).
-#install(TARGETS ACE EXPORT ACEConfig
-#	ARCHIVE  DESTINATION ${CMAKE_INSTALL_LIBDIR}
-#	LIBRARY  DESTINATION ${CMAKE_INSTALL_LIBDIR}
-#	RUNTIME  DESTINATION ${CMAKE_INSTALL_BINDIR})  # This is for Windows
-# install(DIRECTORY include DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(TARGETS ComprEx EXPORT
+	ARCHIVE  DESTINATION ${CMAKE_INSTALL_DIR}/lib
+	LIBRARY  DESTINATION ${CMAKE_INSTALL_DIR}/lib)
+install(DIRECTORY ../include DESTINATION ${CMAKE_INSTALL_DIR})
 
-## This makes the project importable from the build directory
-#export(TARGETS ACE FILE ACEConfig.cmake)
