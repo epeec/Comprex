@@ -1,6 +1,9 @@
 # the build-directory
 build
 .gitignore~
+^\#*
+^.\#*
+^~*
 
 # CMake-files
 CMakeLists.txt.user

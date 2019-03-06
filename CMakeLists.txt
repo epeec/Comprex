@@ -13,6 +13,10 @@ set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic")
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse")
 set (GTEST_ROOT "/scratch/stoyanov/TRACE/googletest-master_src/googletest-master/googletest")
 
+set (GASPI_CXX_ROOT "/scratch/stoyanov/GaspiCxx/GaspiCxx")
+
+set (CMAKE_SHARED_LINKER_FLAGS "-Wl,-rpath=/home/work/soft/gcc/5.2.0/lib")
+
 # add GPI2
 FIND_PACKAGE(PkgConfig)
 PKG_CHECK_MODULES(GPI2 REQUIRED GPI2>=1.3.0)
@@ -20,10 +24,14 @@ include_directories ( ${GPI2_INCLUDE_DIRS} )
 link_directories ( ${GPI2_LIBRARY_DIRS} )
 
 include_directories (
-        ${GPI2_INCLUDE_DIRS} )
+        ${GPI2_INCLUDE_DIRS} 
+        ${GASPI_CXX_ROOT}/include
+        )
 
 link_directories (
-        ${GPI2_LIBRARY_DIRS} )
+        ${GPI2_LIBRARY_DIRS} 
+        ${GASPI_CXX_ROOT}/src
+        )
 	
 add_subdirectory (src)
 add_subdirectory (examples)
