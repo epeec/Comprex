@@ -45,24 +45,38 @@ main(int argc, char* argv[])
     }
 
     printf("\n\n After the exchange \n\n");
-
-    gaspi::group::Rank srcRank(gaspi::group::Rank(0));
-    gaspi::group::Rank destRank(gaspi::group::Rank(1));
     
-    // allocate src- and target- buffers, rnak#0 -> src, rank#1 -> target       
-    // perform the communication, rank#0 sends 
-    // (i.e., initTransfer on the source buff)
-    int tag = 1;
-    if(context.rank() == gaspi::group::Rank(0)) {
-       gaspi::singlesided::write::SourceBuffer 
-	 srcBuff(segment, localSize*sizeof(double));       
+    // allocate src- and target- buffers on both ranks       
+    gaspi::singlesided::write::SourceBuffer
+         srcBuff(segment, localSize*sizeof(double)) ;
+    gaspi::singlesided::write::TargetBuffer 
+         targetBuff(segment, localSize*sizeof(double));
 
-       srcBuff.connectToRemoteTarget(context,
-                                     destRank,
+    int tag = 1;  // what is this for ??
+    int tag1 =2;
+    double* srcBuffEntry;
+    double* targBuffEntry;
+
+    gaspi::group::Rank neighbRank(0);
+    if(context.rank() == gaspi::group::Rank(0)) {
+      neighbRank++;
+    }
+
+    // rank #0
+    if(context.rank() == gaspi::group::Rank(0)) {
+
+      //gaspi::group::Rank neighbRank(1);
+
+      srcBuff.connectToRemoteTarget(context,
+                                     neighbRank,
                                      tag).waitForCompletion();
 
+      //targetBuff.connectToRemoteSource(context,
+      //                               neighbRank,
+      //                               tag1).waitForCompletion();
+
        // now copy the data to src buffer
-       double* srcBuffEntry = (reinterpret_cast<double *>(srcBuff.address()));
+       srcBuffEntry = (reinterpret_cast<double *>(srcBuff.address()));
        for(int i = 0; i < localSize; i++) {
 	 srcBuffEntry[i] = myVect[i];
        }
@@ -72,22 +86,47 @@ main(int argc, char* argv[])
        }
          
        srcBuff.initTransfer(context);
+       //targetBuff.waitForCompletion(); 
+
+       // print the target buffer
+       /*
+       targBuffEntry = (reinterpret_cast<double *>(targetBuff.address()));
+       for(int i = 0; i < localSize; i++) {
+	 myVect[i] = targBuffEntry[i];
+       }
+      for(int i = 0; i < localSize; i++) {
+        printf("\n [%d] myVect[%d]:%e ", myRnk, i, targBuffEntry[i]); //myVect[i]);
+      }
+       */
        
     }
 
-    // perform the communication, rank#1 receives 
-    // (i.e., waitForCompletion on targetBuff) 
+    // perform the communication, rank #1
     if(context.rank() == gaspi::group::Rank(1)) {
-       gaspi::singlesided::write::TargetBuffer 
-         targetBuff(segment, localSize*sizeof(double));
+
+      //gaspi::group::Rank neighbRank(0);
+
+      //srcBuff.connectToRemoteTarget(context,
+      //                               neighbRank,
+      //                               tag1).waitForCompletion();
 
        targetBuff.connectToRemoteSource(context,
-                                        srcRank,
+                                        neighbRank,
                                         tag).waitForCompletion();
+
+
+       // now copy the data to src buffer
+       //srcBuffEntry = (reinterpret_cast<double *>(srcBuff.address()));
+       //for(int i = 0; i < localSize; i++) {
+       // srcBuffEntry[i] = myVect[i];
+       //}
+
+       
+       //srcBuff.initTransfer(context);
        targetBuff.waitForCompletion(); 
 
        // print the target buffer
-       double* targBuffEntry = (reinterpret_cast<double *>(targetBuff.address()));
+       targBuffEntry = (reinterpret_cast<double *>(targetBuff.address()));
        for(int i = 0; i < localSize; i++) {
 	 myVect[i] = targBuffEntry[i];
        }
