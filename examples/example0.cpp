@@ -128,6 +128,8 @@ main(int argc, char* argv[])
     cmprex.Compress_and_WriteRemote(myVect, 10, 0.2, neighbRank);
     //cmprex.Compress_and_WriteRemote(std::move(myVect), 10, 0.2, neighbRank);
 
+   
+    compressed_exchange::ComprEx<int> cmprex_int(runtime, context, segment);
     //-----
 
     // rank #0

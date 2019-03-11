@@ -4,6 +4,7 @@ build
 ^\#*
 ^.\#*
 ^~*
+*~
 
 # CMake-files
 CMakeLists.txt.user
