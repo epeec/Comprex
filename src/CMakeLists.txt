@@ -1,7 +1,7 @@
 #Create the ComprEx library.
 # The extension is already found. Any number of sources could be listed here.
 add_library ( ComprEx
-    comprexchange.cxx
+    comprex.cxx
  )
 
 # Make sure the compiler can find include files for our Hello library

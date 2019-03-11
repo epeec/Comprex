@@ -34,6 +34,7 @@ namespace comprEx {
 
   }; // myClass
 
+  
 
 }  // end namespace comprEx
 
