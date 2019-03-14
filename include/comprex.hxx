@@ -6,6 +6,8 @@
 
 #include <iostream>
 #include <string>
+#include <vector>
+#include <fstream>
 
 #include <GaspiCxx/Runtime.hpp>
 #include <GaspiCxx/Context.hpp>
@@ -34,18 +36,65 @@ namespace compressed_exchange {
 
   }; // myClass
 
+
+
+  // compression type
+  enum class CompressionType {
+      runLengthEncoding,     // run-length-encoding  
+      sparseIndexing // sparse indexing
+  };
+
+
+
   template <class VarTYPE>
   class ComprEx {
        
     private:
+      
+       // compression type
+       CompressionType  _type;
 
        // GaspiCxx 
        gaspi::Runtime & _gpiCxx_runtime;
        gaspi::Context & _gpiCxx_context;
        gaspi::segment::Segment & _gpiCxx_segment;
+           
+       // size of and a reference to the original vector
+       int _origSize;
+       const VarTYPE* _origVector;
+
+       // treshold value used to compress the vector 
+       VarTYPE _treshold;
+
+       // flag indicating the "sign" ("yes" or "no") of the starting
+       // run-length-sequence. The signs then alternatingly change.
+       // "yes"-sequence <-> signumFlag = 1
+       // "no"-sequence <-> signumFlag = 0       
+       int _signumFlag;
+
+       int _shrinkedSize; // vector size after the compression
+       // compressed vector, with items/values greater than treshold,   
+       // i.e. _shrinkedVector[i] >= treshold, i = 0..(_shrinkedSize-1).
+       // This is the vector to be transferred, together with the
+       // vector of run-lengthg codes, see below 
+       std::unique_ptr<VarTYPE []> _shrinkedVector;
+              
+       int _runLengthSize; // size of the run-length vector
+       // vector of run-lenth codes. The convention here:
+       // This vector ALWAYS starts with the (number of) runs
+       // for a meaningful values
+       std::unique_ptr<int []>   _runLength;
+
+       // working vectors
+       std::vector<VarTYPE> _wrkVect;
+       std::vector<int>     _wrkRunLength;
+    
+
 
     public:
-       ComprEx( gaspi::Runtime & runTime
+       ComprEx( 
+	        CompressionType type
+	      , gaspi::Runtime & runTime
               , gaspi::Context & context
 	      , gaspi::segment::Segment & segment
 	       );
@@ -56,11 +105,29 @@ namespace compressed_exchange {
     // Compress the input vector of type VarTYPE and given size,
     // using the treshold provided as an argument,
     // and then GaspiCxx-send it to the destination rank destRank. 
-    void Compress_and_WriteRemote(
+    void compress_and_WriteRemote(
 	       std::unique_ptr<VarTYPE []> const & vector // pointer to the vector
-               , int size                         // vector´s (original) size
-	       , VarTYPE treshold                 // treshold
-	       , gaspi::group::Rank  destRank);   // destination rank
+               , int size                    // vector´s (original) size
+	       , VarTYPE treshold            // treshold
+	       , gaspi::group::Rank  destRank// destination rank
+               , int nThreads = 1);   // number of threads used in compression
+
+    void printCompressedVector(const char *fullPath) const;
+    void printCompressedVector_inOriginalSize(const char *fullPath) const;
+    void printRunLengthsVector(const char *fullPath) const;
+    void printOriginalVector(const char *fullPath)  const;
+ 
+    void compressVector_RLE(
+           std::unique_ptr<VarTYPE []> const & vector // pointer to the vector
+         , int size                    // vector´s (original) size
+	 , VarTYPE treshold);
+
+    void compressVector_SI(
+           std::unique_ptr<VarTYPE []> const & vector // pointer to the vector
+         , int size                    // vector´s (original) size
+	 , VarTYPE treshold);
+
+    void transferCompressedVector(){};
 
   }; // ComprEx 
   

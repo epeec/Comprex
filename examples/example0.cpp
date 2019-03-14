@@ -68,12 +68,14 @@ main(int argc, char* argv[])
     }
 
     //-----
-    compressed_exchange::ComprEx<double> cmprex(runtime, context, segment);
-    cmprex.Compress_and_WriteRemote(myVect, 10, 0.2, neighbRank);
+    compressed_exchange::CompressionType type = 
+      compressed_exchange::CompressionType::runLengthEncoding;
+    compressed_exchange::ComprEx<double> cmprex(type, runtime, context, segment);
+    //cmprex.compress_and_WriteRemote(myVect, 10, 0.2, neighbRank);
     //cmprex.Compress_and_WriteRemote(std::move(myVect), 10, 0.2, neighbRank);
 
    
-    compressed_exchange::ComprEx<int> cmprex_int(runtime, context, segment);    
+    compressed_exchange::ComprEx<int> cmprex_int(type, runtime, context, segment);    
     std::unique_ptr<int[]> myVect_int = 
               std::unique_ptr<int[]> (new int [localSize]);
     for(int i = 0; i < localSize; i++) {
@@ -83,7 +85,11 @@ main(int argc, char* argv[])
     for(int i = 0; i < localSize; i++) {
       printf("\n [%d] myVect_int[%d]:%d ", myRnk, i, myVect_int[i]);      
     }
-    cmprex_int.Compress_and_WriteRemote(myVect_int, 10, 1, neighbRank);
+    cmprex_int.compress_and_WriteRemote(myVect_int, 10, 400, neighbRank);
+    cmprex_int.printCompressedVector("/scratch/stoyanov/comprEx/run");
+    cmprex_int.printRunLengthsVector("/scratch/stoyanov/comprEx/run");
+    cmprex_int.printCompressedVector_inOriginalSize(
+                                     "/scratch/stoyanov/comprEx/run");
     //-----
 
     // rank #0
