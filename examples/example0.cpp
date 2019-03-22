@@ -86,6 +86,7 @@ main(int argc, char* argv[])
       printf("\n [%d] myVect_int[%d]:%d ", myRnk, i, myVect_int[i]);      
     }
     cmprex_int.compress_and_WriteRemote(myVect_int, 10, 400, neighbRank);
+
     cmprex_int.printCompressedVector("/scratch/stoyanov/comprEx/run");
     cmprex_int.printRunLengthsVector("/scratch/stoyanov/comprEx/run");
     cmprex_int.printCompressedVector_inOriginalSize(
@@ -169,6 +170,10 @@ main(int argc, char* argv[])
 
     return EXIT_SUCCESS;
   } // try
+  catch (const std::exception &e) {
+     std::cerr << e.what() << std::endl;
+     return EXIT_FAILURE;
+  }
   catch(...) {
      return EXIT_FAILURE;
   }

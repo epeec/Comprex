@@ -17,6 +17,10 @@
 #include <GaspiCxx/singlesided/write/TargetBuffer.hpp>
 #include <GaspiCxx/utility/ScopedAllocation.hpp>
 
+
+#include <runLenCompressr.hxx>
+//#include <sparseIdxCompressr.hxx>
+
 #ifndef COMPREX_H
 #define COMPREX_H
 
@@ -37,11 +41,10 @@ namespace compressed_exchange {
   }; // myClass
 
 
-
   // compression type
   enum class CompressionType {
-      runLengthEncoding,     // run-length-encoding  
-      sparseIndexing // sparse indexing
+      runLengthEncoding,     // run-length-encoding (RLE) 
+      sparseIndexing // sparse indexing   (SI)
   };
 
 
@@ -66,30 +69,11 @@ namespace compressed_exchange {
        // treshold value used to compress the vector 
        VarTYPE _treshold;
 
-       // flag indicating the "sign" ("yes" or "no") of the starting
-       // run-length-sequence. The signs then alternatingly change.
-       // "yes"-sequence <-> signumFlag = 1
-       // "no"-sequence <-> signumFlag = 0       
-       int _signumFlag;
+       // run-lengths compress engine 
+       std::unique_ptr< impl::CompressorRunLengths<VarTYPE> >  _compresrRL; 
 
-       int _shrinkedSize; // vector size after the compression
-       // compressed vector, with items/values greater than treshold,   
-       // i.e. _shrinkedVector[i] >= treshold, i = 0..(_shrinkedSize-1).
-       // This is the vector to be transferred, together with the
-       // vector of run-lengthg codes, see below 
-       std::unique_ptr<VarTYPE []> _shrinkedVector;
-              
-       int _runLengthSize; // size of the run-length vector
-       // vector of run-lenth codes. The convention here:
-       // This vector ALWAYS starts with the (number of) runs
-       // for a meaningful values
-       std::unique_ptr<int []>   _runLength;
-
-       // working vectors
-       std::vector<VarTYPE> _wrkVect;
-       std::vector<int>     _wrkRunLength;
-    
-
+       // sparse indexing compress engine 
+       // std::unique_ptr< CompressorSparsIdx<VarTYPE> >  _compresrSI; 
 
     public:
        ComprEx( 
@@ -136,5 +120,6 @@ namespace compressed_exchange {
 
 // include the template implementation
 #include <comprex.cxx>
+#include <runLenCompressr.cxx>
 
 #endif // #define COMPREX_H
