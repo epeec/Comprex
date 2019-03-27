@@ -18,15 +18,16 @@ namespace compressed_exchange {
      _gpiCxx_runtime(runTime)
      , _gpiCxx_context(context)
      , _gpiCxx_segment(segment)
+     //, _srcBuff()
+     //, _targetBuff()
      , _origSize(0)
      , _origVector() 
      , _treshold(0)
      , _shrinkedSize(0)
-     , _shrinkedVector()
      , _runLengthSize(0)
-     , _runLength()
      , _wrkVect()
      , _wrkRunLength()
+     , _buffSizeBytes(0)
   {
 
   } 
@@ -162,9 +163,7 @@ namespace compressed_exchange {
        cntr++;  
      }//  
      
-
      file.close();
-
    }
 
    template <class VarTYPE>
@@ -172,12 +171,59 @@ namespace compressed_exchange {
    {
 
    }
+
+   template <class VarTYPE>
+   const VarTYPE* 
+   CompressorRunLengths<VarTYPE>::getPtrShrinkedVector() const
+   {
+   
+      return  _wrkVect.data();
+   }
+
+   template <class VarTYPE>
+   const int* 
+   CompressorRunLengths<VarTYPE>::getPtrRunLengthsVector() const
+   {
+
+      return _wrkRunLength.data();
+   }
+
+   template <class VarTYPE>
+   const int
+   CompressorRunLengths<VarTYPE>:: getSizeCompressedVector() const
+   {
+      return _shrinkedSize;
+   }
+
+   template <class VarTYPE>
+   const int 
+   CompressorRunLengths<VarTYPE>::getSizeRunLengthsVector() const
+   {
+      return _runLengthSize;
+   }
+
+   template <class VarTYPE>
+   const int 
+   CompressorRunLengths<VarTYPE>::getSignumFlag() const
+   {
+      return _signumFlag;
+   }
+
+
+    template <class VarTYPE>
+    const VarTYPE 
+    CompressorRunLengths<VarTYPE>::getTreshold() const
+    {
+      return _treshold;
+    }
+
+
   
    template <class VarTYPE>
-   void CompressorRunLengths<VarTYPE>::compressVector(
+   void CompressorRunLengths<VarTYPE>::compressVectorSingleThreaded(
            std::unique_ptr<VarTYPE []> const & vector // pointer to the vector
          , int size                    // vector´s (original) size
-	 , VarTYPE treshold)
+	 , VarTYPE treshold)      // treshold
    {
      _origVector = vector.get();
      _origSize = size;
@@ -275,10 +321,266 @@ namespace compressed_exchange {
             "The sum of run-length-vector entries NOT equal orig. vect. size");
      }
 
+   } // compressVectorSingleThreaded
+  
 
-   } // compressVector_RLE
+   template <class VarTYPE>
+   void 
+   CompressorRunLengths<VarTYPE>::communicateDataBufferSize_senderSide(
+                                            gaspi::group::Rank  destRank
+					    , int tag  )
+   {
+       gaspi::singlesided::write::SourceBuffer
+                    srcBuff( _gpiCxx_segment, sizeof(int)) ;
 
-  }
+       srcBuff.connectToRemoteTarget(_gpiCxx_context,
+                                     destRank,
+                                     tag).waitForCompletion();
+
+       int* buffEntry = (reinterpret_cast<int *>(srcBuff.address()));
+       *buffEntry =  _buffSizeBytes;
+
+       printf(" \n [%d] src rank, sends to dest-rank:%d _buffSizeBytes:%d \n",
+	      _gpiCxx_context.rank().get(), destRank.get(), _buffSizeBytes);              
+       srcBuff.initTransfer(_gpiCxx_context);
+   }
+   
+   template <class VarTYPE>
+   void 
+   CompressorRunLengths<VarTYPE>::communicateDataBufferSize_recverSide(
+                                              gaspi::group::Rank  srcRank
+					      , int tag )
+   {
+       gaspi::singlesided::write::TargetBuffer
+                    targBuff( _gpiCxx_segment, sizeof(int)) ;
+
+       targBuff.connectToRemoteSource(_gpiCxx_context,
+                                        srcRank,
+                                        tag).waitForCompletion();
+
+       targBuff.waitForCompletion(); 
+
+       int* buffEntry = (reinterpret_cast<int *>(targBuff.address()));
+       _buffSizeBytes = *buffEntry;
+
+       printf(" \n [%d] dest rank, got from src-rank:%d _buffSizeBytes:%d \n",
+	      _gpiCxx_context.rank().get(), srcRank.get(), _buffSizeBytes);       }
+
+   template <class VarTYPE>
+   void 
+   CompressorRunLengths<VarTYPE>::calculateSizeSourceBuffer()
+   {
+     _buffSizeBytes = 0;
+
+     // start with 4 integers:
+     //    int original Vector Size
+     //    int shrinkedVectorSize
+     //    int runLengthSize
+     //    int signumFlag
+     _buffSizeBytes += 4*sizeof(int);
+
+     // then the runLengths[] array, i.e. #_runLengthSize integers
+     _buffSizeBytes += _runLengthSize * sizeof(int);
+
+     // then the compressed vector values, i.e. #_shrinkedSize VarTYPE-s
+     _buffSizeBytes += _shrinkedSize * sizeof(VarTYPE);
+
+   }
+
+   template <class VarTYPE>
+   void 
+   CompressorRunLengths<VarTYPE>::fillInSourceBuffer(
+           gaspi::singlesided::write::SourceBuffer &srcBuff)
+   {
+       void* pBuffBegin = srcBuff.address();
+       void* pCrr =   pBuffBegin;
+
+       // originalVectorSize , int
+       *(reinterpret_cast<int *>(pCrr)) = _origSize;
+       pCrr += sizeof(int);
+
+       // shrinkedVectorSize , int
+       *(reinterpret_cast<int *>(pCrr)) = _shrinkedSize;
+       pCrr += sizeof(int);
+
+       //  run-Length-vector Size, int
+       *(reinterpret_cast<int *>(pCrr)) = _runLengthSize;
+       pCrr += sizeof(int);
+ 
+       // signumFlag, int
+       *(reinterpret_cast<int *>(pCrr)) = _signumFlag;
+       pCrr += sizeof(int);
+
+       // _runLengthsSize integers, the contents of _wrkRunLength[]-vector
+       std::memcpy(pCrr, _wrkRunLength.data(), _runLengthSize*sizeof(int) ); 
+       pCrr +=  _runLengthSize*sizeof(int);
+
+       // _shrinkedSize VarTYPE, the contents of _wrkVect[]-vector
+       std::memcpy(pCrr, _wrkVect.data(), _shrinkedSize*sizeof(VarTYPE) ); 
+       pCrr +=  _shrinkedSize*sizeof(VarTYPE);
+
+   }
+
+
+
+   template <class VarTYPE>
+   void 
+   CompressorRunLengths<VarTYPE>::sendCompressedVectorToDestRank(
+	            gaspi::group::Rank  destRank // destination rank 
+		  , int tag)
+   {
+
+     calculateSizeSourceBuffer();
+     
+     // first communicate (send to dest rank) the buffer size
+     communicateDataBufferSize_senderSide(destRank, tag);
+
+     // then communicate the data itself 
+     // alloc GaspiCxx source  buffer
+     printf("\n [%d] before allocation src buff of %d bytes \n",
+	    _gpiCxx_context.rank().get(), _buffSizeBytes);
+
+     gaspi::singlesided::write::SourceBuffer
+           srcBuff(_gpiCxx_segment, _buffSizeBytes) ;
+
+     printf("\n [%d] after allocation src buff of %d bytes \n",
+	    _gpiCxx_context.rank().get(), _buffSizeBytes);
+
+     srcBuff.connectToRemoteTarget(_gpiCxx_context,
+                                     destRank,
+                                     tag).waitForCompletion();
+     fillInSourceBuffer(srcBuff);
+
+     srcBuff.initTransfer(_gpiCxx_context);
+    
+     //printf("\n [%d] exit sendCompressedVectorToDestRank() \n",
+     //	    _gpiCxx_context.rank().get(), _buffSizeBytes);     
+
+   } //sendCompressedVectorToDestRank
+
+
+   template <class VarTYPE>
+   void 
+   CompressorRunLengths<VarTYPE>::getCompressedVectorFromSrcRank(
+                    std::unique_ptr<VarTYPE []>  & vector 
+	          , gaspi::group::Rank  srcRank // source rank              
+		  , int tag)
+   {
+
+     // first communicate (get from src rank) the buffer size
+     communicateDataBufferSize_recverSide(srcRank, tag);
+
+     
+     // then get  the data itself 
+     // alloc GaspiCxx  target- buffer
+     printf("\n [%d] before allocation targ-buff of %d bytes \n",
+	    _gpiCxx_context.rank().get(), _buffSizeBytes);
+
+     gaspi::singlesided::write::TargetBuffer 
+           targetBuff(_gpiCxx_segment, _buffSizeBytes);
+
+
+     printf("\n [%d] after allocation targ buff of %d bytes \n",
+	    _gpiCxx_context.rank().get(), _buffSizeBytes);
+
+     targetBuff.connectToRemoteSource(_gpiCxx_context,
+                                        srcRank,
+                                        tag).waitForCompletion();
+
+      targetBuff.waitForCompletion();
+
+      //deCompressVector(targetBuff, vector);
+      deCompressVector_inLocalStructs(targetBuff);
+      
+      //printf("\n [%d] exit getCompressedVectorFromSrcRank() \n",
+      //	    _gpiCxx_context.rank().get(), _buffSizeBytes);     
+   } // getCompressedVectorFromSrcRank
+
+   template <class VarTYPE>
+   void 
+   CompressorRunLengths<VarTYPE>::deCompressVector_inLocalStructs(
+		       gaspi::singlesided::write::TargetBuffer &targBuff)
+   {
+       void* pBuffBegin = targBuff.address();
+       void* pCrr =   pBuffBegin;
+
+       // originalVectorSize , int
+       if(*(reinterpret_cast<int *>(pCrr)) != _origSize) {
+	 printf("\n [%d] sendr-rank-orig-size:%d my-orig_size:%d \n",
+		_gpiCxx_context.rank().get(), 
+                *(reinterpret_cast<int *>(pCrr)), _origSize);
+           throw std::runtime_error (
+            "sender-rank original-vector-size differs than the receivers one.");
+       }
+       //_origSize = *(reinterpret_cast<int *>(pCrr));
+       pCrr += sizeof(int);
+       
+       // shrinkedVectorSize , int
+       _shrinkedSize = *(reinterpret_cast<int *>(pCrr));
+       pCrr += sizeof(int);
+
+       //  run-Length-vector Size, int
+       _runLengthSize = *(reinterpret_cast<int *>(pCrr));
+       pCrr += sizeof(int);
+ 
+       // signumFlag, int
+        _signumFlag = *(reinterpret_cast<int *>(pCrr));
+       pCrr += sizeof(int);
+
+       
+       // _runLengthsSize integers, the contents of _wrkRunLength[]-vector
+       _wrkRunLength.resize(_runLengthSize);
+       std::memcpy(_wrkRunLength.data(), pCrr, _runLengthSize*sizeof(int) ); 
+       pCrr +=  _runLengthSize*sizeof(int);
+
+       // _shrinkedSize VarTYPE, the contents of _wrkVect[]-vector
+       _wrkVect.resize(_shrinkedSize); 
+       std::memcpy(_wrkVect.data(), pCrr, _shrinkedSize*sizeof(VarTYPE) ); 
+       pCrr +=  _shrinkedSize*sizeof(VarTYPE);
+       
+
+   } // deCompressVector_inLocalStructs
+
+
+   template <class VarTYPE>
+   void 
+   CompressorRunLengths<VarTYPE>::compress_and_p2pVectorWriteRemote(
+	       std::unique_ptr<VarTYPE []> const & vector // pointer to the vector
+               , int size                    // vector´s (original) size
+	       , VarTYPE treshold            // treshold
+	       , gaspi::group::Rank  destRank// destination rank
+               , int tag                     // message tag
+               , int nThreads)   // number of threads used in compression
+   {
+
+     if(nThreads == 1) compressVectorSingleThreaded(vector, size, treshold);
+     else {
+       throw std::runtime_error (
+            "Multi-threaded RLE compression not implemented ..");
+     }
+     sendCompressedVectorToDestRank(destRank, tag);
+
+   } // compress_and_writeRemote
+
+    
+   template <class VarTYPE>
+   void 
+   CompressorRunLengths<VarTYPE>::p2pVectorGetRemote(
+	       std::unique_ptr<VarTYPE []>  & vector // pointer to dest vector
+               , int size                    // vector´s (original) size
+	       , gaspi::group::Rank  srcRank// source rank
+               , int tag                    // message tag
+               , int nThreads)
+   {
+
+     _origSize = size;
+     getCompressedVectorFromSrcRank(vector, srcRank, tag);
+   } //  p2pGetRemoteVector
+    
+
+
+  } // namespace impl
+
 } // namespace compressed_exchange
 
 #endif

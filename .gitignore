@@ -22,6 +22,9 @@ _deps
 # Prerequisites
 *.d
 
+# my old stuff
+*.old
+
 # Compiled Object files
 *.slo
 *.lo

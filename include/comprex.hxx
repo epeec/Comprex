@@ -75,6 +75,8 @@ namespace compressed_exchange {
        // sparse indexing compress engine 
        // std::unique_ptr< CompressorSparsIdx<VarTYPE> >  _compresrSI; 
 
+
+
     public:
        ComprEx( 
 	        CompressionType type
@@ -89,10 +91,12 @@ namespace compressed_exchange {
     // Compress the input vector of type VarTYPE and given size,
     // using the treshold provided as an argument,
     // and then GaspiCxx-send it to the destination rank destRank. 
-    void compress_and_WriteRemote(
+    void compress_and_p2pWriteRemote(
 	       std::unique_ptr<VarTYPE []> const & vector // pointer to the vector
+	       //const VarTYPE* pVector= NULL
                , int size                    // vector´s (original) size
 	       , VarTYPE treshold            // treshold
+	       , gaspi::group::Rank  srcRank // source rank
 	       , gaspi::group::Rank  destRank// destination rank
                , int nThreads = 1);   // number of threads used in compression
 
@@ -101,18 +105,6 @@ namespace compressed_exchange {
     void printRunLengthsVector(const char *fullPath) const;
     void printOriginalVector(const char *fullPath)  const;
  
-    void compressVector_RLE(
-           std::unique_ptr<VarTYPE []> const & vector // pointer to the vector
-         , int size                    // vector´s (original) size
-	 , VarTYPE treshold);
-
-    void compressVector_SI(
-           std::unique_ptr<VarTYPE []> const & vector // pointer to the vector
-         , int size                    // vector´s (original) size
-	 , VarTYPE treshold);
-
-    void transferCompressedVector(){};
-
   }; // ComprEx 
   
 

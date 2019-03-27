@@ -73,27 +73,28 @@ namespace compressed_exchange {
    }
 
    template <class VarTYPE>
-   void ComprEx<VarTYPE>::compress_and_WriteRemote(
-	       std::unique_ptr<VarTYPE []> const & vector//pointer to the vector
+   void ComprEx<VarTYPE>::compress_and_p2pWriteRemote(
+ 	       std::unique_ptr<VarTYPE []> const & vector//pointer to the vector
+	       //const VarTYPE * pVector     
                , int size                         // vector´s (original) size
 	       , VarTYPE treshold                 // treshold
+	       , gaspi::group::Rank  srcRank      // source rank
 	       , gaspi::group::Rank  destRank     // destination rank
                , int nThreads) // number of threads used in compression
    {
  
      _origVector = vector.get();
+     //_origVector = pVector;
      _origSize = size;
      _treshold = treshold;
 
      if(_type == CompressionType::runLengthEncoding) {
-          compressVector_RLE(vector, size, treshold);
+       //    _compresrRL->compress_and_p2pWriteRemote(
+       //		 vector, size, treshold, srcRank, destRank, nThreads);
      }
      if(_type == CompressionType::sparseIndexing) {
-          compressVector_SI(vector, size, treshold);
+       //
      }
-
-     transferCompressedVector();
-
 
      //int myRnk = static_cast<int> ( _gpiCxx_context.rank().get() ); 
      //for(int i = 0; i < size; i++) {
@@ -149,32 +150,6 @@ namespace compressed_exchange {
 
    }
  
-   template <class VarTYPE>
-   void ComprEx<VarTYPE>::compressVector_RLE(
-           std::unique_ptr<VarTYPE []> const & vector // pointer to the vector
-         , int size                    // vector´s (original) size
-	 , VarTYPE treshold)
-   {
-     _compresrRL->compressVector(vector, size, treshold);
-   }
-
-   
-   template <class VarTYPE>
-   void ComprEx<VarTYPE>::compressVector_SI(
-           std::unique_ptr<VarTYPE []> const & vector // pointer to the vector
-         , int size                    // vector´s (original) size
-	 , VarTYPE treshold)
-   {
-
-     _origVector = vector.get();
-     _origSize = size;
-     _treshold = treshold;
-
-     //_shrinkedSize = 0;
-     //_runLengthSize = 0;
-
-
-   } // compressVector_SI
 
 } // end namespace compressed_exchange
 
