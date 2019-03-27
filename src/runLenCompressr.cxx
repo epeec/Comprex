@@ -136,6 +136,52 @@ namespace compressed_exchange {
    }
 
    template <class VarTYPE>
+   void CompressorRunLengths<VarTYPE>::fillInVectorFromLocalStructs(
+                                      std::unique_ptr<VarTYPE []> & vector)
+   {
+
+     int cntr_orig = 0;
+     int cntr_comprs = 0;
+     int cntr_runLengths = 0;
+
+     if(_signumFlag == 0) {  // strting with "no"-sequence
+       cntr_orig += _wrkRunLength[cntr_runLengths];
+       for(int i = 0; i < cntr_orig; i++) {
+         vector[i] = 0;
+       }
+       cntr_runLengths++;
+     } // if(_signumFlag == 0)
+
+     // now alternate (i) "yes"-items (ii) "no" items
+     while (cntr_orig <  _origSize) {
+
+       // "yes"-items
+       for(int i = cntr_orig;
+	   i < cntr_orig + _wrkRunLength[cntr_runLengths]; i++) {
+
+         //if(cntr_comprs == _shrinkedSize) throw;
+         vector[i] = _wrkVect[cntr_comprs];
+         cntr_comprs++;
+       }
+       cntr_orig += _wrkRunLength[cntr_runLengths];
+       cntr_runLengths++;
+
+       if(cntr_orig == _origSize) break;
+          
+        // "no"-items
+       for(int i = cntr_orig;
+	   i < cntr_orig + _wrkRunLength[cntr_runLengths]; i++) {
+         vector[i] = 0;       
+       }
+      cntr_orig += _wrkRunLength[cntr_runLengths];
+      cntr_runLengths++;
+
+     } // while 
+
+   }//fillInVectorFromLocalStructs
+
+
+   template <class VarTYPE>
    void CompressorRunLengths<VarTYPE>::printRunLengthsVector(const char *fullPath) const
    {
      const int rank = static_cast<int> ( _gpiCxx_context.rank().get() ); 
@@ -339,9 +385,7 @@ namespace compressed_exchange {
 
        int* buffEntry = (reinterpret_cast<int *>(srcBuff.address()));
        *buffEntry =  _buffSizeBytes;
-
-       printf(" \n [%d] src rank, sends to dest-rank:%d _buffSizeBytes:%d \n",
-	      _gpiCxx_context.rank().get(), destRank.get(), _buffSizeBytes);              
+          
        srcBuff.initTransfer(_gpiCxx_context);
    }
    
@@ -363,8 +407,7 @@ namespace compressed_exchange {
        int* buffEntry = (reinterpret_cast<int *>(targBuff.address()));
        _buffSizeBytes = *buffEntry;
 
-       printf(" \n [%d] dest rank, got from src-rank:%d _buffSizeBytes:%d \n",
-	      _gpiCxx_context.rank().get(), srcRank.get(), _buffSizeBytes);       }
+  }
 
    template <class VarTYPE>
    void 
@@ -437,14 +480,8 @@ namespace compressed_exchange {
 
      // then communicate the data itself 
      // alloc GaspiCxx source  buffer
-     printf("\n [%d] before allocation src buff of %d bytes \n",
-	    _gpiCxx_context.rank().get(), _buffSizeBytes);
-
      gaspi::singlesided::write::SourceBuffer
            srcBuff(_gpiCxx_segment, _buffSizeBytes) ;
-
-     printf("\n [%d] after allocation src buff of %d bytes \n",
-	    _gpiCxx_context.rank().get(), _buffSizeBytes);
 
      srcBuff.connectToRemoteTarget(_gpiCxx_context,
                                      destRank,
@@ -453,9 +490,6 @@ namespace compressed_exchange {
 
      srcBuff.initTransfer(_gpiCxx_context);
     
-     //printf("\n [%d] exit sendCompressedVectorToDestRank() \n",
-     //	    _gpiCxx_context.rank().get(), _buffSizeBytes);     
-
    } //sendCompressedVectorToDestRank
 
 
@@ -473,27 +507,18 @@ namespace compressed_exchange {
      
      // then get  the data itself 
      // alloc GaspiCxx  target- buffer
-     printf("\n [%d] before allocation targ-buff of %d bytes \n",
-	    _gpiCxx_context.rank().get(), _buffSizeBytes);
-
      gaspi::singlesided::write::TargetBuffer 
            targetBuff(_gpiCxx_segment, _buffSizeBytes);
 
-
-     printf("\n [%d] after allocation targ buff of %d bytes \n",
-	    _gpiCxx_context.rank().get(), _buffSizeBytes);
-
-     targetBuff.connectToRemoteSource(_gpiCxx_context,
+      targetBuff.connectToRemoteSource(_gpiCxx_context,
                                         srcRank,
                                         tag).waitForCompletion();
-
       targetBuff.waitForCompletion();
 
       //deCompressVector(targetBuff, vector);
       deCompressVector_inLocalStructs(targetBuff);
-      
-      //printf("\n [%d] exit getCompressedVectorFromSrcRank() \n",
-      //	    _gpiCxx_context.rank().get(), _buffSizeBytes);     
+      fillInVectorFromLocalStructs(vector);
+
    } // getCompressedVectorFromSrcRank
 
    template <class VarTYPE>

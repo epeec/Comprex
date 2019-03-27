@@ -67,10 +67,13 @@ main(int argc, char* argv[])
       myVect_int[i] =  randmG_int.generateRandomNumber();
         // localSize * static_cast<double> (context.rank().get()) + i;                
     }
+
+    printf("\n"); 
     for(int i = 0; i < localSize; i++) {
       printf("\n [%d] before exchange, myVect_int[%d]:%d ", 
                                        myRnk_int, i, myVect_int[i]);      
     }
+    printf("\n"); 
 
     compressed_exchange::impl::CompressorRunLengths<int>
             cmprex_int(runtime, context, segment);
@@ -84,7 +87,13 @@ main(int argc, char* argv[])
     if(myRank == destRank) {
       cmprex_int.p2pVectorGetRemote(
 		  myVect_int, localSize, srcRank, tag);
-    } 
+      printf("\n"); 
+      for(int i = 0; i < localSize; i++) {
+          printf("\n [%d] after exchange, myVect_int[%d]:%d ", 
+                                       myRnk_int, i, myVect_int[i]);      
+      }//for
+      printf("\n"); 
+    }// if(myRank == destRank)
 
     cmprex_int.printCompressedVector("/scratch/stoyanov/comprEx/run");
     cmprex_int.printRunLengthsVector("/scratch/stoyanov/comprEx/run");

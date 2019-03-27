@@ -85,6 +85,9 @@ namespace impl {
 		       gaspi::singlesided::write::TargetBuffer &targBuff);
                           //   , std::unique_ptr<VarTYPE []> & vector);
      
+       void fillInVectorFromLocalStructs(std::unique_ptr<VarTYPE []> & vector);
+
+
     public:
       CompressorRunLengths(  gaspi::Runtime & runTime
                            , gaspi::Context & context
