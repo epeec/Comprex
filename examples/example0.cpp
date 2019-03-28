@@ -5,8 +5,7 @@
  */
 
 
-//#include <comprex.hxx>
-#include <runLenCompressr.hxx>
+#include <comprex.hxx>
 #include <myRandomGen.cxx>
 
 main(int argc, char* argv[])
@@ -25,10 +24,6 @@ main(int argc, char* argv[])
 
     gaspi::segment::Segment segment( static_cast<size_t>(1) << 28);
 
-    // first print some message
-    std::string myMessage("Hi");
-    compressed_exchange::MyClass myClass(myMessage);
-    myClass.printMessage();
 
     // allocate3 a local doubles-vector and fill it in with some numbers
     const int localSize=10;
@@ -75,7 +70,7 @@ main(int argc, char* argv[])
     }
     printf("\n"); 
 
-    compressed_exchange::impl::CompressorRunLengths<int>
+    compressed_exchange::ComprExRunLengths<int>
             cmprex_int(runtime, context, segment);
 
 
@@ -96,7 +91,7 @@ main(int argc, char* argv[])
     }// if(myRank == destRank)
 
     cmprex_int.printCompressedVector("/scratch/stoyanov/comprEx/run");
-    cmprex_int.printRunLengthsVector("/scratch/stoyanov/comprEx/run");
+    cmprex_int.printAuxiliaryInfoVector("/scratch/stoyanov/comprEx/run");
     cmprex_int.printCompressedVector_inOriginalSize(
                                      "/scratch/stoyanov/comprEx/run");
     return EXIT_SUCCESS;

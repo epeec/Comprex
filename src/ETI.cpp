@@ -13,12 +13,12 @@ namespace compressed_exchange {
 
 #ifdef ETI_INT
   template class ComprEx<int>;
-  template class impl::CompressorRunLengths<int>; 
+  template class ComprExRunLengths<int>; 
 #endif
 
 #ifdef ETI_DOUBLE
   template class ComprEx<double>;
-  template class impl::CompressorRunLengths<double>; 
+  template class ComprExRunLengths<double>; 
 #endif
 
 } // namespace compressed_exchange
