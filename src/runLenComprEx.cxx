@@ -200,7 +200,7 @@ namespace compressed_exchange {
      int crrRunLength_yes = 0;
      int crrRunLength_no = 0;
      // check the first vector item, set the signum-flag
-     if(ComprEx<VarTYPE>::_origVector[0] >= treshold) {
+     if(std::abs(ComprEx<VarTYPE>::_origVector[0]) >= treshold) {
        //_shrinkedVect[_shrinkedSize] = _origVector[0];  // store the 0-th item
        ComprEx<VarTYPE>::_shrinkedVect.push_back(
                               ComprEx<VarTYPE>::_origVector[0]);
@@ -219,7 +219,7 @@ namespace compressed_exchange {
      }
 
      for(int i = 1; i < ComprEx<VarTYPE>::_origSize; i++) {
-       if(ComprEx<VarTYPE>::_origVector[i] >= treshold) {
+       if(std::abs(ComprEx<VarTYPE>::_origVector[i]) >= treshold) {
          //_shrinkedVect[_shrinkedSize] = _origVector[i];
 	 ComprEx<VarTYPE>::_shrinkedVect.push_back(
                                  ComprEx<VarTYPE>::_origVector[i]); 
