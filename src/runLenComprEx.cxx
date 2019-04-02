@@ -15,6 +15,7 @@ namespace compressed_exchange {
 	                          , gaspi::segment::Segment & segment                                             )
       :
       _signumFlag(0)
+    , _mThrLRE()   
     , ComprEx<VarTYPE>(runTime, context, segment)
   {
 
@@ -393,6 +394,42 @@ namespace compressed_exchange {
 
    } // deCompressVector_inLocalStructs
    
+
+   template <class VarTYPE>
+   void 
+   ComprExRunLengths<VarTYPE>::compress_and_p2pVectorWriteRemote(
+	       std::unique_ptr<VarTYPE []> const & vector // pointer to the vector
+               , int size                    // vector´s (original) size
+	       , VarTYPE treshold            // treshold
+	       , gaspi::group::Rank  destRank// destination rank
+               , int tag                     // message tag
+               , int nThreads)   // number of threads used in compression
+   {
+
+     if(nThreads == 1) {
+          compressVectorSingleThreaded(vector, size, treshold);
+     }
+     else if(nThreads > 1 ) {
+          _mThrLRE = std::unique_ptr<MultiThreadedRLE<VarTYPE> > 
+	    (new MultiThreadedRLE<VarTYPE> (
+		     this->_origSize
+		   , ComprEx<VarTYPE>::_origVector
+		   , ComprEx<VarTYPE>::_treshold
+		   , _signumFlag
+	           , ComprEx<VarTYPE>::_shrinkedVect
+	      	   , ComprEx<VarTYPE>::_auxInfoVectr
+	     	   , nThreads)
+            );  
+	  _mThrLRE->compress(ComprEx<VarTYPE>::_shrinkedSize, 
+                             ComprEx<VarTYPE>::_auxInfoVectSize);
+     }
+     else {
+       throw std::runtime_error (
+            "For this number of threads RLE compression not implemented ..");
+     }
+     ComprEx<VarTYPE>::sendCompressedVectorToDestRank(destRank, tag);
+
+   } // compress_and_writeRemote
 
 } // namespace compressed_exchange
 

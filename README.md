@@ -16,6 +16,7 @@ Requirements:
 
 Building comprex
 ----------------
+
 2.1. clone the git-repository into <comrex_root>
 
 2.2. edit appropriatelly <comrex_root>/CMakeFiles.txt to set there the variables
@@ -26,6 +27,7 @@ Building comprex
     ( it has been added due to the relative old g++ system-libraries )
 
 2.3. in <comprex_root> create a subdirectory "build" to compile comprex
+
   $ cd  <comrex_root>
   $ mkdir build
   $ cd build

@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 #include <fstream>
+#include <memory>
 
 #include <GaspiCxx/Runtime.hpp>
 #include <GaspiCxx/Context.hpp>
@@ -16,6 +17,9 @@
 #include <GaspiCxx/singlesided/write/SourceBuffer.hpp>
 #include <GaspiCxx/singlesided/write/TargetBuffer.hpp>
 #include <GaspiCxx/utility/ScopedAllocation.hpp>
+
+
+#include <mThrRLEcompress.hxx>
 
 #ifndef COMPREX_H
 #define COMPREX_H
@@ -164,6 +168,9 @@ namespace compressed_exchange {
        // "no"-sequence <-> signumFlag = 0       
        int _signumFlag;
 
+
+       std::unique_ptr< MultiThreadedRLE<VarTYPE> > _mThrLRE;
+
        void compressVectorSingleThreaded(
             std::unique_ptr<VarTYPE []> const & vector // pointer to the vector
           , int size                    // vector´s (original) size
@@ -190,6 +197,14 @@ namespace compressed_exchange {
 
       const int getSignumFlag() const;
 
+      void compress_and_p2pVectorWriteRemote(
+	       std::unique_ptr<VarTYPE []> const & vector // pointer to the vector
+               , int size                    // vector´s (original) size
+	       , VarTYPE treshold            // treshold
+	       , gaspi::group::Rank  destRank// destination rank
+               , int tag                     // message tag
+               , int nThreads = 1);   // number of threads used in compression     
+
   }; // class ComprExRunLengths 
 
 
@@ -204,5 +219,6 @@ namespace compressed_exchange {
 // include the template implementation
 #include <comprex.cxx>
 #include <runLenComprEx.cxx>
+#include <mThrRLEcompress.cxx>
 
 #endif // #define COMPREX_H

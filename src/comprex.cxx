@@ -244,10 +244,16 @@ namespace compressed_exchange {
                , int nThreads)   // number of threads used in compression
    {
 
-     if(nThreads == 1) compressVectorSingleThreaded(vector, size, treshold);
+     if(nThreads == 1) {
+          compressVectorSingleThreaded(vector, size, treshold);
+     }
+     else if(nThreads > 1 ) {
+          
+
+     }
      else {
        throw std::runtime_error (
-            "Multi-threaded RLE compression not implemented ..");
+            "For this number of threads RLE compression not implemented ..");
      }
      sendCompressedVectorToDestRank(destRank, tag);
 

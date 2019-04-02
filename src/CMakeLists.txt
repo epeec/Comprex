@@ -3,6 +3,7 @@
 add_library ( ComprEx
     comprex.cxx
     runLenComprEx.cxx
+    mThrRLEcompress.cxx
     ETI.cpp
  )
 
