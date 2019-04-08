@@ -63,6 +63,19 @@ main(int argc, char* argv[])
         // localSize * static_cast<double> (context.rank().get()) + i;                
     }
 
+    compressed_exchange::ComprExRunLengths<int>
+            cmprex_int(runtime, context, segment);
+
+for(int ii = 0; ii < 3; ii++) { 
+
+  context.barrier();
+  printf("\n  [%d] ==================== Attempt No:%d \n", myRnk_int, ii);
+
+    for(int i = 0; i < localSize; i++) {
+      myVect_int[i] =  randmG_int.generateRandomNumber();
+        // localSize * static_cast<double> (context.rank().get()) + i;                
+    }
+
     printf("\n"); 
     for(int i = 0; i < localSize; i++) {
       printf("\n [%d] before exchange, myVect_int[%d]:%d ", 
@@ -70,9 +83,7 @@ main(int argc, char* argv[])
     }
     printf("\n"); 
 
-    compressed_exchange::ComprExRunLengths<int>
-            cmprex_int(runtime, context, segment);
-
+context.barrier();
 
     if(myRank == srcRank) {
       cmprex_int.compress_and_p2pVectorWriteRemote(
@@ -89,6 +100,10 @@ main(int argc, char* argv[])
       }//for
       printf("\n"); 
     }// if(myRank == destRank)
+
+  context.barrier();
+
+ } //ii
 
     cmprex_int.printCompressedVector("/scratch/stoyanov/comprEx/run");
     cmprex_int.printAuxiliaryInfoVector("/scratch/stoyanov/comprEx/run");

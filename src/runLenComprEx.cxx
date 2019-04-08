@@ -428,6 +428,7 @@ namespace compressed_exchange {
             "For this number of threads RLE compression not implemented ..");
      }
      ComprEx<VarTYPE>::sendCompressedVectorToDestRank(destRank, tag);
+     ComprEx<VarTYPE>::erazeTheLocalStructures();
 
    } // compress_and_writeRemote
 

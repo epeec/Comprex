@@ -272,6 +272,7 @@ namespace compressed_exchange {
 
      _origSize = size;
      getCompressedVectorFromSrcRank(vector, srcRank, tag);
+     erazeTheLocalStructures();
    } //  p2pGetRemoteVector
 
 } // end namespace compressed_exchange
