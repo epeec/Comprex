@@ -13,7 +13,7 @@ main(int argc, char* argv[])
 
   try {
 
-    // init GPI-2 
+    // init GaspiCxx
     gaspi::Runtime runtime;
     gaspi::Context context;
 
@@ -64,7 +64,10 @@ main(int argc, char* argv[])
     }
 
     compressed_exchange::ComprExRunLengths<int>
-            cmprex_int(runtime, context, segment);
+      cmprex_int(runtime, context, segment, localSize);
+
+    const int * pRestsV = cmprex_int.entryPointerRestsVector();
+
 
 for(int ii = 0; ii < 3; ii++) { 
 
@@ -76,34 +79,67 @@ for(int ii = 0; ii < 3; ii++) {
         // localSize * static_cast<double> (context.rank().get()) + i;                
     }
 
-    printf("\n"); 
-    for(int i = 0; i < localSize; i++) {
-      printf("\n [%d] before exchange, myVect_int[%d]:%d ", 
-                                       myRnk_int, i, myVect_int[i]);      
-    }
-    printf("\n"); 
+    if(myRank == srcRank) {
+
+        printf("\n"); 
+        for(int i = 0; i < localSize; i++) {
+        printf("\n [%d] outer_loop:%d, before compress & exchange, myVect_int[%d]:%d ", 
+	       myRnk_int, ii, i, myVect_int[i]);      
+        }
+        printf("\n"); 
+
+        printf("\n"); 
+        for(int i = 0; i < localSize; i++) {
+        printf("\n [%d] outer_loop:%d, before compress & exchange, restsVector[%d]:%d ", 
+	       myRnk_int, ii, i, pRestsV[i]);      
+        }
+        printf("\n"); 
+
+    }//if(myRank == srcRank)
 
 context.barrier();
 
     if(myRank == srcRank) {
       cmprex_int.compress_and_p2pVectorWriteRemote(
-		  myVect_int, localSize, myTreshold, destRank, tag);
+		  myVect_int, myTreshold, destRank, tag);
     } 
 
     if(myRank == destRank) {
       cmprex_int.p2pVectorGetRemote(
-		  myVect_int, localSize, srcRank, tag);
+		  myVect_int, srcRank, tag);
+      
       printf("\n"); 
       for(int i = 0; i < localSize; i++) {
-          printf("\n [%d] after exchange, myVect_int[%d]:%d ", 
-                                       myRnk_int, i, myVect_int[i]);      
+          printf("\n [%d] outer_loop:%d, after exchange, myVect_int[%d]:%d ", 
+		 myRnk_int, ii, i, myVect_int[i]);      
       }//for
       printf("\n"); 
     }// if(myRank == destRank)
 
+     
+    if(myRank == srcRank) {
+        printf("\n"); 
+        for(int i = 0; i < localSize; i++) {
+        printf("\n [%d] outer_loop:%d, after compress & exchange, restsVector[%d]:%d ", 
+	       myRnk_int, ii, i, pRestsV[i]);      
+        }
+        printf("\n"); 
+
+    }//if(myRank == srcRank)
+
   context.barrier();
 
  } //ii
+cmprex_int.flushTheRestsVector();
+
+    if(myRank == srcRank) {
+        printf("\n"); 
+        for(int i = 0; i < localSize; i++) {
+        printf("\n [%d] outer_loops over, after flushing the rests, restsVector[%d]:%d ", 
+	       myRnk_int, i, pRestsV[i]);      
+        }
+        printf("\n"); 
+    }//if(myRank == srcRank)
 
     cmprex_int.printCompressedVector("/scratch/stoyanov/comprEx/run");
     cmprex_int.printAuxiliaryInfoVector("/scratch/stoyanov/comprEx/run");

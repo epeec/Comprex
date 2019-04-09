@@ -9,6 +9,7 @@
 #include <vector>
 #include <fstream>
 #include <memory>
+#include <cstring>
 
 #include <GaspiCxx/Runtime.hpp>
 #include <GaspiCxx/Context.hpp>
@@ -51,6 +52,9 @@ namespace compressed_exchange {
        int _origSize;
        const VarTYPE* _origVector;
 
+       // vector containing "rests" : the left-over after the communication
+       std::unique_ptr< VarTYPE [] > _restsVector;
+
        // treshold value used to compress the vector 
        VarTYPE _treshold;
 
@@ -77,9 +81,12 @@ namespace compressed_exchange {
        // GaspiCxx transfer
        std::size_t _buffSizeBytes;
 
+
+       // check if (_origVector[i] + _restsVector[i]) > _treshold;
+       virtual bool checkFulfilled_forItem(int i);
+
        virtual void compressVectorSingleThreaded(
             std::unique_ptr<VarTYPE []> const & vector // pointer to the vector
-          , int size                    // vector´s (original) size
 	    , VarTYPE treshold) = 0;      // treshold       
 
        
@@ -100,19 +107,31 @@ namespace compressed_exchange {
        virtual void fillInVectorFromLocalStructs(
                                      std::unique_ptr<VarTYPE []> & vector) = 0;
 
+      virtual void sendCompressedVectorToDestRank(
+		         gaspi::group::Rank  destRank // destination rank
+			 , int tag);
+
+      virtual void getCompressedVectorFromSrcRank(
+                            std::unique_ptr<VarTYPE []>  & vector
+			  , gaspi::group::Rank  srcRank // source rank
+			  , int tag);
+
+
        virtual void erazeTheLocalStructures();   // _auxInfoVect, _shrinkedVect, ..
-
-
+        
 
     public:
       ComprEx( 
                 gaspi::Runtime & runTime
               , gaspi::Context & context
 	      , gaspi::segment::Segment & segment
+	      , int origSize   // size of the vectors to work with
 	       );
 
       ~ComprEx();
 
+      virtual void flushTheRestsVector();
+      virtual const VarTYPE * entryPointerRestsVector() const;
 
       virtual void printCompressedVector(const char *fullPath) const;
       virtual void printCompressedVector_inOriginalSize(
@@ -128,20 +147,9 @@ namespace compressed_exchange {
       virtual const int getSizeAuxiliaryInfoVector() const;
      
       virtual  const VarTYPE getTreshold() const;
-       
-
-      virtual void sendCompressedVectorToDestRank(
-		         gaspi::group::Rank  destRank // destination rank
-			 , int tag);
-
-      virtual void getCompressedVectorFromSrcRank(
-                            std::unique_ptr<VarTYPE []>  & vector
-			  , gaspi::group::Rank  srcRank // source rank
-			  , int tag);
-     
+            
       virtual void compress_and_p2pVectorWriteRemote(
 	       std::unique_ptr<VarTYPE []> const & vector // pointer to src vector
-               , int size                     // vector´s (original) size
 	       , VarTYPE treshold             // treshold
 	       , gaspi::group::Rank  destRank // destination rank
                , int tag                     // message tag
@@ -149,7 +157,6 @@ namespace compressed_exchange {
 
       virtual void p2pVectorGetRemote(
 	       std::unique_ptr<VarTYPE []>  & vector // pointer to dest vector
-               , int size                    // vector´s (original) size
 	       , gaspi::group::Rank  srcRank// source rank
                , int tag                    // message tag
                , int nThreads = 1);         // number of threads used in de-compression
@@ -173,7 +180,6 @@ namespace compressed_exchange {
 
        void compressVectorSingleThreaded(
             std::unique_ptr<VarTYPE []> const & vector // pointer to the vector
-          , int size                    // vector´s (original) size
 	  , VarTYPE treshold);      // treshold       
 
        void calculateSizeSourceBuffer();
@@ -188,6 +194,7 @@ namespace compressed_exchange {
       ComprExRunLengths(  gaspi::Runtime & runTime
                            , gaspi::Context & context
 	                   , gaspi::segment::Segment & segment
+	                   , int origSize   // size of the vectors to work with
                           );
 
       ~ComprExRunLengths();
@@ -199,7 +206,6 @@ namespace compressed_exchange {
 
       void compress_and_p2pVectorWriteRemote(
 	       std::unique_ptr<VarTYPE []> const & vector // pointer to the vector
-               , int size                    // vector´s (original) size
 	       , VarTYPE treshold            // treshold
 	       , gaspi::group::Rank  destRank// destination rank
                , int tag                     // message tag

@@ -16,13 +16,15 @@ namespace compressed_exchange {
                 gaspi::Runtime & runTime
               , gaspi::Context & context
 	      , gaspi::segment::Segment & segment
+	      , int origSize   // size of the vectors to work with
 	      ) 
         :
        _gpiCxx_runtime(runTime)
      , _gpiCxx_context(context)
      , _gpiCxx_segment(segment)
-     , _origSize(0)
+     , _origSize(origSize)
      , _origVector() 
+     , _restsVector()
      , _treshold(0)
      , _shrinkedSize(0)
      , _auxInfoVectSize(0)
@@ -30,9 +32,9 @@ namespace compressed_exchange {
      , _auxInfoVectr()
      , _buffSizeBytes(0)
    {
-
+      _restsVector =  std::unique_ptr< VarTYPE[] > (new VarTYPE [_origSize]);
+      flushTheRestsVector();
    }
-
    
    template <class VarTYPE>
    ComprEx<VarTYPE>::~ComprEx()
@@ -40,6 +42,26 @@ namespace compressed_exchange {
 
    }
 
+   template <class VarTYPE>
+   void ComprEx<VarTYPE>::flushTheRestsVector()
+   {
+      std::memset(static_cast<void *> (_restsVector.get()), 0, 
+                                                   _origSize*sizeof(VarTYPE));
+   }
+   
+   template <class VarTYPE>
+   const VarTYPE * ComprEx<VarTYPE>::entryPointerRestsVector() const
+   {
+     return _restsVector.get();
+   }
+
+   template <class VarTYPE>
+   bool ComprEx<VarTYPE>::checkFulfilled_forItem(int i)
+   {
+     _restsVector[i] += _origVector[i];
+     if(std::abs(_restsVector[i]) >= _treshold) return true;
+     return false;
+   }
 
    template <class VarTYPE>
    void ComprEx<VarTYPE>::printCompressedVector(const char *fullPath) const
@@ -237,7 +259,6 @@ namespace compressed_exchange {
    void 
    ComprEx<VarTYPE>::compress_and_p2pVectorWriteRemote(
 	       std::unique_ptr<VarTYPE []> const & vector // pointer to the vector
-               , int size                    // vector´s (original) size
 	       , VarTYPE treshold            // treshold
 	       , gaspi::group::Rank  destRank// destination rank
                , int tag                     // message tag
@@ -245,7 +266,7 @@ namespace compressed_exchange {
    {
 
      if(nThreads == 1) {
-          compressVectorSingleThreaded(vector, size, treshold);
+          compressVectorSingleThreaded(vector, treshold);
      }
      else if(nThreads > 1 ) {
           
@@ -264,13 +285,11 @@ namespace compressed_exchange {
    void 
    ComprEx<VarTYPE>::p2pVectorGetRemote(
 	       std::unique_ptr<VarTYPE []>  & vector // pointer to dest vector
-               , int size                    // vector´s (original) size
 	       , gaspi::group::Rank  srcRank// source rank
                , int tag                    // message tag
                , int nThreads)
    {
 
-     _origSize = size;
      getCompressedVectorFromSrcRank(vector, srcRank, tag);
      erazeTheLocalStructures();
    } //  p2pGetRemoteVector

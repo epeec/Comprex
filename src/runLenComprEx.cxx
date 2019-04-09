@@ -12,11 +12,13 @@ namespace compressed_exchange {
   ComprExRunLengths<VarTYPE>::ComprExRunLengths(
                                     gaspi::Runtime & runTime
                                   , gaspi::Context & context
-	                          , gaspi::segment::Segment & segment                                             )
+	                          , gaspi::segment::Segment & segment
+	                          , int origSize   // size of the vectors to work with
+                                               )
       :
       _signumFlag(0)
     , _mThrLRE()   
-    , ComprEx<VarTYPE>(runTime, context, segment)
+      , ComprEx<VarTYPE>(runTime, context, segment, origSize)
   {
 
   } 
@@ -183,11 +185,9 @@ namespace compressed_exchange {
    void 
    ComprExRunLengths<VarTYPE>::compressVectorSingleThreaded(
            std::unique_ptr<VarTYPE []> const & vector // pointer to the vector
-         , int size                    // vector´s (original) size
 	 , VarTYPE treshold)      // treshold
    {
      ComprEx<VarTYPE>::_origVector = vector.get();
-     ComprEx<VarTYPE>::_origSize = size;
      ComprEx<VarTYPE>::_treshold = treshold;
 
      ComprEx<VarTYPE>::_shrinkedSize = 0;
@@ -201,31 +201,34 @@ namespace compressed_exchange {
      int crrRunLength_yes = 0;
      int crrRunLength_no = 0;
      // check the first vector item, set the signum-flag
-     if(std::abs(ComprEx<VarTYPE>::_origVector[0]) >= treshold) {
-       //_shrinkedVect[_shrinkedSize] = _origVector[0];  // store the 0-th item
+     if(ComprEx<VarTYPE>::checkFulfilled_forItem(0)) {
+       //_shrinkedVect[_shrinkedSize] = _restsVector[0];  // store the 0-th item
        ComprEx<VarTYPE>::_shrinkedVect.push_back(
-                              ComprEx<VarTYPE>::_origVector[0]);
+                              ComprEx<VarTYPE>::_restsVector[0]);
        ComprEx<VarTYPE>::_shrinkedSize++; // increase the shrinkedSize-counter
+
+       // set to zero the  0-th item, after storing it
+       ComprEx<VarTYPE>::_restsVector[0] = 0;
+
        crrRunLength_yes++;    // increase the "yes"-counter   
        _signumFlag = 1;
      }
-     else {  //if(_origVect[0] < treshold)
-       // The convention: the vector _auxInfoVectr[] always starts
-       // with the (number of) runs of meaningful values 
-       // (i.e. the number of "yes"-runs) even if it is zero.
-       // The latter is exactly the case here, thus 
-       // increase the  crrRunLength_no-counter 
+     else {  //if(_restsVect[0] < treshold)
+       // increase the  crrRunLength_no-counter and set the _signumFlag
        crrRunLength_no++;
        _signumFlag = 0;
      }
 
      for(int i = 1; i < ComprEx<VarTYPE>::_origSize; i++) {
-       if(std::abs(ComprEx<VarTYPE>::_origVector[i]) >= treshold) {
-         //_shrinkedVect[_shrinkedSize] = _origVector[i];
+       if(ComprEx<VarTYPE>::checkFulfilled_forItem(i) ) {
+         //_shrinkedVect[_shrinkedSize] = _restsVector[i];
 	 ComprEx<VarTYPE>::_shrinkedVect.push_back(
-                                 ComprEx<VarTYPE>::_origVector[i]); 
+                                 ComprEx<VarTYPE>::_restsVector[i]);          
          ComprEx<VarTYPE>::_shrinkedSize++;
-       
+
+         // set to zero the  0-th item, after storing it
+	 ComprEx<VarTYPE>::_restsVector[i] = 0;
+
          if(crrRunLength_yes >= 0) { // the previous number was an "yes"-number
 	   crrRunLength_yes++;         // Then just increase the counter
          }
@@ -241,12 +244,12 @@ namespace compressed_exchange {
            crrRunLength_no = 0;
          } // if(crrRunLength_no > 0)
          
-       } //if(_origVector[i] >= treshold)
-       else {  // i.e. _origVector[i] < treshold -> write nothing in _shrinkedVect[]
+       } //if( heckFulfilled_forItem(i))
+       else {  // i.e. _restsVector[i] < treshold -> write nothing in _shrinkedVect[]
          if(crrRunLength_no >= 0) {    // the previous number was a "no"-number
 	   crrRunLength_no++;         // Then just increase the counter
          }
-         if(crrRunLength_yes > 0) {//the previous number was a "yes"-number 
+         if(crrRunLength_yes > 0) {//the previous number was an "yes"-number 
            // write the current "yes"-length in _auxInfoVectr[] 
            // (it should be != 0) and increase the counter 
 	   //_auxInfoVectr[_auxInfoVectSize] =  crrRunLength_yes; 
@@ -258,7 +261,7 @@ namespace compressed_exchange {
            crrRunLength_yes=0;
          } //if(crrRunLength_yes > 0)
 
-       } // else .. if(_origVector[i] >= treshold)
+       } // else .. if(_restsVector[i] >= treshold)
 
      } //for(int i  
 
@@ -399,7 +402,6 @@ namespace compressed_exchange {
    void 
    ComprExRunLengths<VarTYPE>::compress_and_p2pVectorWriteRemote(
 	       std::unique_ptr<VarTYPE []> const & vector // pointer to the vector
-               , int size                    // vector´s (original) size
 	       , VarTYPE treshold            // treshold
 	       , gaspi::group::Rank  destRank// destination rank
                , int tag                     // message tag
@@ -407,7 +409,7 @@ namespace compressed_exchange {
    {
 
      if(nThreads == 1) {
-          compressVectorSingleThreaded(vector, size, treshold);
+          compressVectorSingleThreaded(vector, treshold);
      }
      else if(nThreads > 1 ) {
           _mThrLRE = std::unique_ptr<MultiThreadedRLE<VarTYPE> > 
