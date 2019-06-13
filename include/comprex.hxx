@@ -11,6 +11,9 @@
 #include <memory>
 #include <cstring>
 
+
+#include <GaspiCxx/GaspiCxx.hpp>
+/*
 #include <GaspiCxx/Runtime.hpp>
 #include <GaspiCxx/Context.hpp>
 #include <GaspiCxx/group/Group.hpp>
@@ -18,7 +21,7 @@
 #include <GaspiCxx/singlesided/write/SourceBuffer.hpp>
 #include <GaspiCxx/singlesided/write/TargetBuffer.hpp>
 #include <GaspiCxx/utility/ScopedAllocation.hpp>
-
+*/
 
 #include <mThrRLEcompress.hxx>
 
