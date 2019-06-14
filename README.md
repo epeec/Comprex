@@ -25,6 +25,9 @@ Building comprex
     adding the path to the file GPI2.pc (the package-config file for GPI-2)
  -> eventually, comment the line set (CMAKE_SHARED_LINKER_FLAGS ..)
     ( it has been added due to the relative old g++ system-libraries )
+Note that currently we provide the header and the binary for the GaspiCxx library.
+In the upcomming months, we plan to release the source of the GaspiCxx library after
+the final testing, cleaning, and release preparation phases.
 
 2.3. in <comprex_root> create a subdirectory "build" to compile comprex
 
