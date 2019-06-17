@@ -35,7 +35,7 @@ include_directories (
 
 link_directories (
         ${GPI2_LIBRARY_DIRS} 
-        ${GASPI_CXX_ROOT}/src
+        ${GASPI_CXX_ROOT}/lib
         )
 	
 add_subdirectory (src)
