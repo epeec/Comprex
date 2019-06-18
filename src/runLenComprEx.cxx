@@ -422,6 +422,14 @@ namespace compressed_exchange {
 	      	   , ComprEx<VarTYPE>::_auxInfoVectr
 	     	   , nThreads)
             );  
+           
+          // set a pin pattern, in case it has been provided by the user
+	  if( (ComprEx<VarTYPE>::_nThreads > 1) && 
+              (ComprEx<VarTYPE>::_pinPattern != NULL) ) {
+	    _mThrLRE->setPinPatternForTheThreads(ComprEx<VarTYPE>::_nThreads,
+						 ComprEx<VarTYPE>::_pinPattern);
+          }
+
 	  _mThrLRE->compress(ComprEx<VarTYPE>::_shrinkedSize, 
                              ComprEx<VarTYPE>::_auxInfoVectSize);
      }

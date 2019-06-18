@@ -31,6 +31,8 @@ namespace compressed_exchange {
      , _shrinkedVect()
      , _auxInfoVectr()
      , _buffSizeBytes(0)
+     , _nThreads(0)
+     , _pinPattern()
    {
       _restsVector =  std::unique_ptr< VarTYPE[] > (new VarTYPE [_origSize]);
       flushTheRestsVector();
@@ -254,6 +256,17 @@ namespace compressed_exchange {
       fillInVectorFromLocalStructs(vector);
 
    } // getCompressedVectorFromSrcRank
+
+
+   template <class VarTYPE>
+   void 
+   ComprEx<VarTYPE>::setPinPatternForTheThreads(
+		       int nThreads,       // number of threads per rank
+                       std::unique_ptr<int []> const & pinPattern)  // pin pattern
+   {
+      ComprEx<VarTYPE>::_nThreads = nThreads;
+      ComprEx<VarTYPE>::_pinPattern = pinPattern.get();
+   }
 
    template <class VarTYPE>
    void 

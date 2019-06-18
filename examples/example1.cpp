@@ -79,7 +79,7 @@ main(int argc, char* argv[])
     cmprex_int.setPinPatternForTheThreads(nCores, pinPattern);
     //*/
 
-const int nSweeps = 1; // was 3
+const int nSweeps = 3; 
 for(int ii = 0; ii < nSweeps; ii++) {  
 
   context.barrier();
@@ -123,7 +123,7 @@ context.barrier();
     if(myRank == srcRank) {
       cmprex_int.compress_and_p2pVectorWriteRemote(
 		  myVect_int, myTopK, destRank, tag);
-    } 
+    } //myRank == srcRank  
 
     if(myRank == destRank) {
             cmprex_int.p2pVectorGetRemote(
@@ -153,7 +153,7 @@ context.barrier();
  } //ii
 cmprex_int.flushTheRestsVector();
 
-cmprex_int.printAuxiliaryInfoVector("/scratch/stoyanov/comprEx/run");
+//cmprex_int.printAuxiliaryInfoVector("/scratch/stoyanov/comprEx/run");
 
 
     if(myRank == srcRank) {

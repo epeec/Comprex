@@ -17,7 +17,8 @@ namespace compressed_exchange {
                                                )
       :
     //_rawVectPairs()
-     _vectPairs()   
+    _crrWriteCall(0)
+    , _vectPairs()   
     , ComprEx<VarTYPE>(runTime, context, segment, origSize)
   {
 
@@ -29,28 +30,23 @@ namespace compressed_exchange {
 
   } 
 
-
-
+  
   template <class VarTYPE>
-  void ComprExTopK<VarTYPE>::printAuxiliaryInfoVector(
+  void ComprExTopK<VarTYPE>::printAuxiliaryInfoVector( 
                                            const char *fullPath) const
   {
      const int rank = 
       static_cast<int> ( ComprEx<VarTYPE>::_gpiCxx_context.rank().get() ); 
 
+     int itr = _crrWriteCall;
+
      char s_fName[160];
-     sprintf(s_fName, "%s/topK_vect_sorted.%d", fullPath, rank);
+     sprintf(s_fName, "%s/topK_vect_sorted_itr%d.%d", fullPath, itr, rank);
      std::ofstream file;
      file.open(s_fName);
 
      typedef typename std::vector<PairIndexValue<VarTYPE> >::const_iterator 
                                                                    MyIterType;     
-
-     // start with the signum flag
-     //file << "signumFlag: " << _signumFlag << std::endl;
-     // size of the run-lengths sequence 
-     //file << "run-lengths-sequence ttl size: " 
-     //      << ComprEx<VarTYPE>::_auxInfoVectSize << std::endl;
 
      file << "original vector size: " << ComprEx<VarTYPE>::_origSize 
 	  << " pairs-vector size: "<< _vectPairs.size()   << std::endl;
@@ -68,8 +64,14 @@ namespace compressed_exchange {
      }//  
      
      file.close();
-  } //printAuxiliaryInfoVector
+  } //printAuxiliaryInfoVector  
 
+  template <class VarTYPE>
+  const struct PairIndexValue<VarTYPE> *
+  ComprExTopK<VarTYPE>::entryPointerVectorPairs() const
+  {
+    return _vectPairs.data();
+  }
 
   template <class VarTYPE>
   void ComprExTopK<VarTYPE>::calculateNumberOfItemsToSend(VarTYPE topK_percents)
@@ -84,7 +86,7 @@ namespace compressed_exchange {
         static_cast<double> (ComprEx<VarTYPE>::_origSize)
            );
      // the last item to send should have an index   #(_shrinkedSize-1) 
-
+     
   }
 
 
@@ -94,7 +96,6 @@ namespace compressed_exchange {
 
        _vectPairs.resize(ComprEx<VarTYPE>::_origSize);
 
-  printf("\n crr _vactPairs.size = %d \n", _vectPairs.size());
        for(int i = 0; i < ComprEx<VarTYPE>::_origSize; i++) {
 	 ComprEx<VarTYPE>::_restsVector[i] += ComprEx<VarTYPE>::_origVector[i];
          _vectPairs[i].idx = i;
@@ -147,8 +148,6 @@ namespace compressed_exchange {
 
    }// fillInSourceBuffer
 
-
-
   template <class VarTYPE>
   void ComprExTopK<VarTYPE>::compressVectorSingleThreaded(
            std::unique_ptr<VarTYPE []> const & vector // pointer to the vector
@@ -164,6 +163,17 @@ namespace compressed_exchange {
 
    } // compressVectorSingleThreaded
 
+
+   template <class VarTYPE>
+   void  ComprExTopK<VarTYPE>::inRestsVectorSetToZeroTheItemsJustSent()
+   {
+
+     int idx; 
+     for(int i = 0; i < ComprEx<VarTYPE>::_shrinkedSize; i++) {
+       ComprEx<VarTYPE>::_restsVector[_vectPairs[i].idx] = 0;
+     }
+
+   }    
 
    template <class VarTYPE>
    void  ComprExTopK<VarTYPE>::deCompressVector_inLocalStructs(
@@ -203,9 +213,8 @@ namespace compressed_exchange {
                                       std::unique_ptr<VarTYPE []> & vector)
    {
      int idx; 
-     for(int i = 0; i <= ComprEx<VarTYPE>:: _shrinkedSize; i++) {
+     for(int i = 0; i < ComprEx<VarTYPE>::_shrinkedSize; i++) {
        vector[_vectPairs[i].idx] = _vectPairs[i].val;
-       
      }
        
    }
@@ -226,8 +235,6 @@ namespace compressed_exchange {
      
      if(nThreads == 1) {
         compressVectorSingleThreaded(vector, topK_percents);
-        // prepare the GaspiCxx-send_buff and send
-        // NB!! set to zero the i-th item _restsVector[i], after storing it for sending
      }
      else if(nThreads > 1 ) {
        //...
@@ -237,7 +244,10 @@ namespace compressed_exchange {
             "For this number of threads top-K-percents compression not implemented ..");
      }
      ComprEx<VarTYPE>::sendCompressedVectorToDestRank(destRank, tag);
-     //ComprEx<VarTYPE>::erazeTheLocalStructures();
+     inRestsVectorSetToZeroTheItemsJustSent();
+     //printAuxiliaryInfoVector("/scratch/stoyanov/comprEx/run");
+     ComprEx<VarTYPE>::erazeTheLocalStructures();
+     _crrWriteCall++;
 
    } // compress_and_writeRemote
 

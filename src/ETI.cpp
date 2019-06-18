@@ -14,12 +14,14 @@ namespace compressed_exchange {
   template class ComprEx<int>;
   template class ComprExRunLengths<int>;  
   template class MultiThreadedRLE<int>;
+  template class ComprExTopK<int>;
 #endif
 
 #ifdef ETI_DOUBLE
   template class ComprEx<double>;
   template class ComprExRunLengths<double>; 
   template class MultiThreadedRLE<double>;
+  template class ComprExTopK<double>;
 #endif
 
 } // namespace compressed_exchange

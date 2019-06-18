@@ -68,6 +68,16 @@ main(int argc, char* argv[])
 
     const int * pRestsV = cmprex_int.entryPointerRestsVector();
 
+    // threades andf pining
+    const int nCores = 8; 
+    std::unique_ptr<int[]> pinPattern = 
+              std::unique_ptr<int[]> (new int [nCores]);    
+    for(int i = 0; i < nCores; i++) { // sandy-bridge,..
+      if(i % 2 == 0) pinPattern[i] = i*2;
+      if(i % 2 == 1) pinPattern[i] = i;
+    }
+    cmprex_int.setPinPatternForTheThreads(nCores, pinPattern);
+
 
 for(int ii = 0; ii < 3; ii++) { 
 
