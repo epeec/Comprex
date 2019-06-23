@@ -11,11 +11,11 @@ This library - supposedly - meets the needs of Machine Learning Applications.
 - `cmake` version > 3.6 (presently build using `cmake v3.9.3`) 
 - `c++ 14` (presently with `gcc-5.2.0`)
 
-#### Building comprex
+#### Building ComprEx
 
-1. clone the git repository into `<comrex_root>`
+1. clone the git repository into `<ComprEx_root>`
 
-2. edit appropriatelly `<comrex_root>/CMakeFiles.txt` to set the following variables
+2. edit appropriatelly `<ComprEx_root>/CMakeFiles.txt` to set the following variables
     - `GASPI_CXX_ROOT`. Note that currently we provide the header and the binary for the GaspiCxx library.
 In the upcomming months, we plan to release the source of the GaspiCxx library after
 the final testing, cleaning, and release preparation phases
@@ -24,15 +24,15 @@ the final testing, cleaning, and release preparation phases
     - eventually, comment the line with `CMAKE_SHARED_LINKER_FLAGS ...`
     (it has been added due to the relative old g++ system-libraries)
 
-3. in `<comprex_root>` create a subdirectory `build` to compile comprex
-    - `cd  <comrex_root>`
+3. in `<ComprEx_root>` create a subdirectory `build` to compile ComprEx
+    - `cd  <ComprEx_root>`
     - `mkdir build`
     - `cd build`
     - `cmake .. -DCMAKE_INSTALL_DIR=<target_installation_dir>`
     - `make install`
 
-After building and installing comprex
+After building and installing ComprEx
 - the library `libComprEx.a` is installed in `<target_installation_dir>/lib`
 - the header `comprex.hxx` is in `<target_installation_dir>/include`
-- the executable `example0` is in `<comrex_root>/build/examples`
+- the executable `example0` is in `<ComprEx_root>/build/examples`
 
