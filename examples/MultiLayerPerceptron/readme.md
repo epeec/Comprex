@@ -1,4 +1,4 @@
-# Multiplayer Perceptron Example
+# Multilayer Perceptron Example
 
 This example trains a three layer multilayer perceptron (input-output: 784-128-64-10) on the MNIST dataset. It uses synchronous, distributed training, based on the Comprex communication library. The model size is kept small and the number of training epochs is low, so the entire training should only take a few minutes. The final accuracy is computed on a seperate test dataset.
 The hyperparameters of this example were not tuned for the best results. Also, other hyperparameters change with the number of training ranks. 
