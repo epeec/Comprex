@@ -25,11 +25,13 @@ the final testing, cleaning, and release preparation phases
     (it has been added due to the relative old g++ system-libraries)
 
 3. in `<ComprEx_root>` create a subdirectory `build` to compile ComprEx
-    - `cd  <ComprEx_root>`
-    - `mkdir build`
-    - `cd build`
-    - `cmake .. -DCMAKE_INSTALL_DIR=<target_installation_dir>`
-    - `make install`
+    ```
+    cd  <ComprEx_root>
+    mkdir build
+    cd build
+    cmake .. -DCMAKE_INSTALL_DIR=<target_installation_dir>
+    make install
+    ```
 
 After building and installing ComprEx
 - the library `libComprEx.a` is installed in `<target_installation_dir>/lib`
