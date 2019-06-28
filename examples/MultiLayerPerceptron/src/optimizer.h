@@ -32,6 +32,9 @@ public:
         this->comprex_threshold = 0.1;
         this->total_weights_size=0;
         this->comprex_handle = new compressed_exchange::ComprExRunLengths<data_t>(gaspi_runtime, gaspi_context, *gaspi_segment, total_weights_size);
+        
+        this->cmprx_number_of_runs=0;
+        this->cmprx_accumulated_sparsity=0;
     }
 
     ~Comprex_Optimizer<data_t>(){
@@ -122,7 +125,10 @@ public:
                     for(int i=0; i<total_weights_size;++i){
                       if(pRestsV[i]==0) ++zeros;
                     }
-                    printf("Rank %d Transmission sparsity=%f\n", gaspi_myRank.get(), 1-(float)zeros/(float)total_weights_size);
+                    double sparsity = 1-(float)zeros/(float)total_weights_size;
+                    printf("Rank %d Transmission sparsity=%f\n", gaspi_myRank.get(), sparsity);
+                    ++cmprx_number_of_runs;
+                    cmprx_accumulated_sparsity += sparsity;
                 }
             }
             gaspi_context->barrier();
@@ -176,6 +182,10 @@ public:
 
 
     }
+    
+    double get_average_sparsity(){
+        return cmprx_accumulated_sparsity / (double)cmprx_number_of_runs;
+    }
 
 protected:
     layer_list_t layers;
@@ -194,6 +204,9 @@ protected:
     // Comprex
     data_t comprex_threshold;
     compressed_exchange::ComprExRunLengths<data_t>* comprex_handle;
+    // comprex statistics
+    long cmprx_number_of_runs;
+    double cmprx_accumulated_sparsity;
 
     // optimizer dependent update rule
     virtual Tensor<data_t> get_update(Tensor<data_t>*) = 0;

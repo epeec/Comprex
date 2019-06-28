@@ -9,7 +9,7 @@
 #include "layers.h"
 #include "MLP.h"
 
-static const int epochs=2;
+static const int epochs=20;
 static const std::string ckpt_basename = "mlp_train";
 static const float init_learning_rate=0.0001;
 static const int batch_size=128;
@@ -79,7 +79,8 @@ int main(int argc, char *argv[]) {
     //lenet.save_checkpoint("LeNet2.pb");
 
     //mlp.set_optimizer(0.1/(float)gaspi_num_ranks/(float)batch_size);
-    network.set_optimizer(new SGD_Optimizer<tensor_t>(init_learning_rate, gaspi_runtime, gaspi_context));
+    Comprex_Optimizer<tensor_t>* optimizer = new SGD_Optimizer<tensor_t>(init_learning_rate, gaspi_runtime, gaspi_context);
+    network.set_optimizer(optimizer);
 
     //lenet.print_proto();
     //lenet.print_net();
@@ -160,6 +161,8 @@ int main(int argc, char *argv[]) {
         //if(accuracy>=0.9) break;
     }//batch_it
 
+    std::cout<<"Rank "<<gaspi_myRank.get()<<" Average Sparsity: "<<optimizer->get_average_sparsity()<<std::endl;
+
 
     // Final test Accuracy
     if(gaspi_myRank==gaspi_chiefRank) {
@@ -198,7 +201,7 @@ int main(int argc, char *argv[]) {
         test_accuracy /= (batch_size*num_steps);
         std::cout<<"Test Accuracy: "<<test_accuracy<<std::endl;
     }
-
+    
     // Optional:  Delete all global objects allocated by libprotobuf.
     google::protobuf::ShutdownProtobufLibrary();
     return 0;

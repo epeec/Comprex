@@ -175,7 +175,7 @@ protected:
 
         // fc 2
         input_shape = net.back()->get_output_shape();
-        fully_connected_layer(input_shape, {64}, "MLP/fc2");
+        fully_connected_layer(input_shape, {128}, "MLP/fc2");
 
         // fc 3
         input_shape = net.back()->get_output_shape();
