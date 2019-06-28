@@ -9,10 +9,16 @@
 #include "layers.h"
 #include "MLP.h"
 
-static const int epochs=20;
-static const std::string ckpt_basename = "mlp_train";
-static const float init_learning_rate=0.0001;
-static const int batch_size=128;
+///////////////////////////////
+// Hyperparameters
+///////////////////////////////
+static const int epochs=2; // number of epochs for the training to be run
+static const std::string ckpt_basename = "mlp_train"; // a basename for the checkpoint files (no influence on the training)
+static const float init_learning_rate=0.0001; // initial learning rate
+static const int batch_size=128; // training batch size
+static const float learning_rate_decay=1.0; // learning rate decay factor
+static const int learning_rate_decay_steps=100; // number of steps after which learning rate is decayed
+///////////////////////////////
 
 void print_proto(std::string pb_name) {
     myDNN::Net data_proto;
@@ -134,8 +140,8 @@ int main(int argc, char *argv[]) {
         network.update();
 
         // learning rate decay
-        if((batch_it)%100==0){
-            network.decay_learning_rate(1.0);
+        if((batch_it)%learning_rate_decay_steps==0){
+            network.decay_learning_rate(learning_rate_decay);
         }
 
         // checkpointing
