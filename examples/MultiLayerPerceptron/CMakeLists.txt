@@ -15,7 +15,7 @@ set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DETI_DOUBLE -DETI_INT -pedantic")
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse")
 
 set (GTEST_ROOT "path-to-gtest")
-set (COMPREX_ROOT "path-to-comprex")
+set (COMPREX_ROOT "${PROJECT_SOURCE_DIR}/../../")
 set (GASPI_CXX_ROOT ${COMPREX_ROOT})
 
 #set (CMAKE_SHARED_LINKER_FLAGS "-Wl,-rpath=/home/work/soft/gcc/5.2.0/lib")

@@ -16,12 +16,12 @@ set (GTEST_ROOT "path-to-gtest")
 # NOTE: one needs to provide a proper path here
 set (GASPI_CXX_ROOT "${PROJECT_SOURCE_DIR}")
 
-set (CMAKE_SHARED_LINKER_FLAGS "-Wl,-rpath=path-to-gcc-lib")
+set (CMAKE_SHARED_LINKER_FLAGS "-Wl")
 
 # add GPI2
 # if GPI-2 has NOT been loaded as a module, then set appropriately 
 # the environment variable $PKG_CONFIG_PATH in the row below
-set(ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:/path-to/GPI-2/lib64/pkgconfig")
+set(ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:$ENV{GASPI_HOME}/lib64/pkgconfig")
 
 FIND_PACKAGE(PkgConfig)
 PKG_CHECK_MODULES(GPI2 REQUIRED GPI2>=1.3.0)
