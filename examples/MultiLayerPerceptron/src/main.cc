@@ -4,21 +4,16 @@
 #include <vector>
 #include <string>
 #include <math.h>
+#include <sys/stat.h>
 #include "DNN.pb.h"
 #include "read_MNIST.h"
 #include "layers.h"
 #include "MLP.h"
 
-///////////////////////////////
-// Hyperparameters
-///////////////////////////////
-static const int epochs=2; // number of epochs for the training to be run
-static const std::string ckpt_basename = "mlp_train"; // a basename for the checkpoint files (no influence on the training)
-static const float init_learning_rate=0.0001; // initial learning rate
-static const int batch_size=128; // training batch size
-static const float learning_rate_decay=1.0; // learning rate decay factor
-static const int learning_rate_decay_steps=100; // number of steps after which learning rate is decayed
-///////////////////////////////
+static const int epochs=20;
+static const std::string ckpt_basename = "mlp_train";
+static const float init_learning_rate=0.0001;
+static const int batch_size=128;
 
 void print_proto(std::string pb_name) {
     myDNN::Net data_proto;
@@ -42,14 +37,7 @@ void print_proto(std::string pb_name) {
 
 int main(int argc, char *argv[]) {
 
-    // initialize GASPI
-    gaspi::Runtime gaspi_runtime;
-    gaspi::Context gaspi_context;
-    gaspi::group::Rank gaspi_myRank = gaspi_context.rank();
-    int gaspi_num_ranks = gaspi_context.size().get();
-    gaspi::group::Rank gaspi_chiefRank(0);
-
-    // load MNIST
+    // check input arguments
     if(argc == 1) {
         std::cerr<<"Missing argument for MNIST path!"<<std::endl;
         return -1;
@@ -58,13 +46,30 @@ int main(int argc, char *argv[]) {
         std::cerr<<"Missing argument for checkpoint path!"<<std::endl;
         return -1;
     }
+    
+    // setup Google Protobuf
+    GOOGLE_PROTOBUF_VERIFY_VERSION;
 
+    // setup GASPI
+    gaspi::Runtime gaspi_runtime;
+    gaspi::Context gaspi_context;
+    gaspi::group::Rank gaspi_myRank = gaspi_context.rank();
+    int gaspi_num_ranks = gaspi_context.size().get();
+    gaspi::group::Rank gaspi_chiefRank(0);
+
+    // load MNIST
     std::string mnist_path = argv[1];
     MNISTData mnist(mnist_path+"/train-images-idx3-ubyte",mnist_path+"/train-labels-idx1-ubyte");
 
+    // create file structures
     std::string ckpt_dir = argv[2];
-
-    GOOGLE_PROTOBUF_VERIFY_VERSION;
+    if(gaspi_myRank == gaspi_chiefRank){
+        struct stat stat_buffer;
+        if(!mkdir(ckpt_dir.c_str(),0777)){
+            std:cerr<<"Directory "<<ckpt_dir<<" for checkpointing cannot be created!"<<std::endl;
+            return -1;
+        }
+    }
 
     // input and data buffers
     typedef float tensor_t;
@@ -96,6 +101,7 @@ int main(int argc, char *argv[]) {
 
     int num_steps = epochs*mnist.get_num_images()/batch_size/gaspi_num_ranks;
     int dataset_offset= gaspi_myRank.get()*mnist.get_num_images()/gaspi_num_ranks;
+    // main training loop
     for(int batch_it=1; batch_it<=num_steps; ++batch_it) {
         // load input and label
         // transform labels to 1-hot
@@ -140,8 +146,8 @@ int main(int argc, char *argv[]) {
         network.update();
 
         // learning rate decay
-        if((batch_it)%learning_rate_decay_steps==0){
-            network.decay_learning_rate(learning_rate_decay);
+        if((batch_it)%100==0){
+            network.decay_learning_rate(1.0);
         }
 
         // checkpointing
