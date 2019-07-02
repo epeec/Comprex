@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
         std::cerr<<"Missing argument for checkpoint path!"<<std::endl;
         return -1;
     }
-    
+
     // setup Google Protobuf
     GOOGLE_PROTOBUF_VERIFY_VERSION;
 
@@ -62,6 +62,7 @@ int main(int argc, char *argv[]) {
     MNISTData mnist(mnist_path+"/train-images-idx3-ubyte",mnist_path+"/train-labels-idx1-ubyte");
 
     // create file structures
+    /*
     std::string ckpt_dir = argv[2];
     if(gaspi_myRank == gaspi_chiefRank){
         struct stat stat_buffer;
@@ -69,7 +70,7 @@ int main(int argc, char *argv[]) {
             std:cerr<<"Directory "<<ckpt_dir<<" for checkpointing cannot be created!"<<std::endl;
             return -1;
         }
-    }
+    }*/
 
     // input and data buffers
     typedef float tensor_t;
@@ -151,13 +152,14 @@ int main(int argc, char *argv[]) {
         }
 
         // checkpointing
+        /*
         if(gaspi_myRank==gaspi_chiefRank){
             if(batch_it%100==1){
                 std::string ckpt_name = ckpt_basename+"_"+std::to_string(batch_it)+".pb";
                 std::cout<<"Saving checkpoint "<<ckpt_name<<"..."<<std::endl;
                 network.save_checkpoint(ckpt_dir+ckpt_name);
             }
-        }
+        }*/
         // output results
         float accuracy = 0.0;
         for(int b=0; b<batch_size; ++b){
