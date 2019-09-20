@@ -13,21 +13,31 @@ namespace compressed_exchange {
                                     gaspi::Runtime & runTime
                                   , gaspi::Context & context
 	                          , gaspi::segment::Segment & segment
-	                          , int origSize   // size of the vectors to work with
+	                          , int origSize   // size of the vectors to work with	      
+                                  , int nThreads
+	                          , const int* pinPattern
+
                                                )
       :
     //_rawVectPairs()
     _crrWriteCall(0)
+    , _mThrTopK()
     , _vectPairs()   
-    , ComprEx<VarTYPE>(runTime, context, segment, origSize)
+    , ComprEx<VarTYPE>(runTime, context, segment, origSize, nThreads, pinPattern)
   {
+
+    //---- dms tests starts, ComprTopK + threads
+    _pThrParams = new ThreadParamsTopK<VarTYPE> [ComprEx<VarTYPE>::_nThreads];
+    //---- dms tests ends, ComprTopK + threads
 
   } 
 
   template <class VarTYPE>
   ComprExTopK<VarTYPE>::~ComprExTopK()
   {
-
+    //---- dms tests starts, ComprTopK + threads
+         delete [] _pThrParams;
+    //---- dms tests ends, ComprTopK + threads
   } 
 
   
@@ -225,7 +235,7 @@ namespace compressed_exchange {
       , VarTYPE topK_percents  // top K-percents of the items to be transferred
       , gaspi::group::Rank  destRank// destination rank
       , int tag                     // message tag
-      , int nThreads)
+      )
    {
 
      if((topK_percents < 0) || (topK_percents > 100)) {
@@ -233,24 +243,79 @@ namespace compressed_exchange {
             " the value of topK-percents must be within the interval [0, 100]"); 
      }
      
-     if(nThreads == 1) {
+     if(ComprEx<VarTYPE>::_nThreads == 1) {
         compressVectorSingleThreaded(vector, topK_percents);
      }
-     else if(nThreads > 1 ) {
+     else if(ComprEx<VarTYPE>::_nThreads > 1 ) {
        //...
+       // First calculate the global size of the final shrinked vector.
+       // This value is stored in ComprEx::_shrinkedSize, it is required
+       // by the MultiThreadedTopK-class constructor.
+       calculateNumberOfItemsToSend(topK_percents);
+       
+       // reasize the (global) output vector correspondingly
+       _vectPairs.resize(ComprEx<VarTYPE>::_shrinkedSize);
+      
+       _mThrTopK = std::unique_ptr<MultiThreadedTopK<VarTYPE> > 
+	  (new MultiThreadedTopK<VarTYPE> (
+            static_cast<int> ( ComprEx<VarTYPE>::_gpiCxx_context.rank().get() )
+	  ,  this->_origSize
+	  , vector.get() //ComprEx<VarTYPE>::_origVector
+	  , ComprEx<VarTYPE>::_restsVector.get()
+	  , ComprEx<VarTYPE>::_shrinkedSize
+	  , _vectPairs
+	  , ComprEx<VarTYPE>::_nThreads
+          , ComprEx<VarTYPE>::_pThreads.get()
+          , ComprEx<VarTYPE>::_pinPattern					   )
+         );  
+
+         _mThrTopK->compress(_vectPairs);
+       
      }
      else {
        throw std::runtime_error (
             "For this number of threads top-K-percents compression not implemented ..");
      }
+     
+     //NB!! dms, 20.9.19 uncomment the following two lines when communicating
      ComprEx<VarTYPE>::sendCompressedVectorToDestRank(destRank, tag);
      inRestsVectorSetToZeroTheItemsJustSent();
-     //printAuxiliaryInfoVector("/scratch/stoyanov/comprEx/run");
+     ////printAuxiliaryInfoVector("/scratch/stoyanov/comprEx/run");
      ComprEx<VarTYPE>::erazeTheLocalStructures();
      _crrWriteCall++;
-
+     
    } // compress_and_writeRemote
 
+
+  template <class VarTYPE>
+  void ComprExTopK<VarTYPE>::compressOnly_threaded_test(
+      //  std::unique_ptr<VarTYPE []> const & vector // pointer to the vector
+      //, VarTYPE topK_percents  // top K-percents of the items to be transferred
+	//, gaspi::group::Rank  destRank// destination rank
+	//, int tag                     // message tag
+      //, 
+      int nThreads)
+   {
+
+     if(nThreads == 1) {
+       //compressVectorSingleThreaded(vector, topK_percents);
+        throw  std::runtime_error (
+            "NO single-threaded  compressOnly_threaded_test(..)");     }
+     else if(nThreads > 1 ) {
+       //...
+       /*  // new
+       int rank = ComprEx<VarTYPE>::rank();
+       _mThrTopK = std::unique_ptr<MultiThreadedTopK<VarTYPE> > 
+	 (  new MultiThreadedTopK<VarTYPE> (rank, ComprEx<VarTYPE>::_pThreads.get(), nThreads)   );                
+       _mThrTopK->compress();
+       */ // end new variant
+
+     }
+     else {
+       throw std::runtime_error (
+            "For this number of threads top-K-percents compression not implemented ..");
+     }
+   }
 
 
 }// namespace compressed_exchange

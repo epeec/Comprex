@@ -17,9 +17,12 @@ namespace compressed_exchange {
               , gaspi::Context & context
 	      , gaspi::segment::Segment & segment
 	      , int origSize   // size of the vectors to work with
+	      , int nThreads
+	      , const int* _pinPattern
 	      ) 
-        :
-       _gpiCxx_runtime(runTime)
+        : 
+    _type()
+     , _gpiCxx_runtime(runTime)
      , _gpiCxx_context(context)
      , _gpiCxx_segment(segment)
      , _origSize(origSize)
@@ -31,10 +34,16 @@ namespace compressed_exchange {
      , _shrinkedVect()
      , _auxInfoVectr()
      , _buffSizeBytes(0)
-     , _nThreads(0)
+     , _nThreads(nThreads)
      , _pinPattern()
+     , _pThreads()
    {
       _restsVector =  std::unique_ptr< VarTYPE[] > (new VarTYPE [_origSize]);
+
+      if(_nThreads > 0) { 
+         _pThreads = 
+               std::unique_ptr< pthread_t [] > (new pthread_t [_nThreads] );
+      }
       flushTheRestsVector();
    }
    
@@ -261,10 +270,10 @@ namespace compressed_exchange {
    template <class VarTYPE>
    void 
    ComprEx<VarTYPE>::setPinPatternForTheThreads(
-		       int nThreads,       // number of threads per rank
+		       //int nThreads,       // number of threads per rank
                        std::unique_ptr<int []> const & pinPattern)  // pin pattern
    {
-      ComprEx<VarTYPE>::_nThreads = nThreads;
+     //ComprEx<VarTYPE>::_nThreads = nThreads;
       ComprEx<VarTYPE>::_pinPattern = pinPattern.get();
    }
 

@@ -414,7 +414,7 @@ namespace compressed_exchange {
      else if(nThreads > 1 ) {
           _mThrLRE = std::unique_ptr<MultiThreadedRLE<VarTYPE> > 
 	    (new MultiThreadedRLE<VarTYPE> (
-		     this->_origSize
+ 		    this->_origSize
 		   , ComprEx<VarTYPE>::_origVector
 		   , ComprEx<VarTYPE>::_treshold
 		   , _signumFlag

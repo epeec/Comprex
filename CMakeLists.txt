@@ -9,6 +9,7 @@ set (Test OFF)
 
 set (CMAKE_CXX_STANDARD 14)
 set (CMAKE_BUILD_TYPE Release)
+#set (CMAKE_BUILD_TYPE Debug)
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DETI_DOUBLE -DETI_INT -Wall -Wextra -pedantic")
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse")
 set (GTEST_ROOT "/scratch/stoyanov/TRACE/googletest-master_src/googletest-master/googletest")
@@ -16,7 +17,7 @@ set (GTEST_ROOT "/scratch/stoyanov/TRACE/googletest-master_src/googletest-master
 #set (GASPI_CXX_ROOT "/scratch/stoyanov/GaspiCxx/GaspiCxx")
 set (GASPI_CXX_ROOT "/scratch/stoyanov/GaspiCxx/GaspiCxx-comprexx")
 
-set (CMAKE_SHARED_LINKER_FLAGS "-Wl,-rpath=/home/work/soft/gcc/5.2.0/lib")
+#set (CMAKE_SHARED_LINKER_FLAGS "-Wl,-rpath=/home/work/soft/gcc/5.2.0/lib")
 
 # add GPI2
 # if GPI-2 has NOT been loaded as a module, then set appropriately 

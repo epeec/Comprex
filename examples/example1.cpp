@@ -22,6 +22,15 @@ main(int argc, char* argv[])
       throw;
     }
 
+    if(argc != 2) {
+       printf("Wrong number of command line arguments !! \n");
+       printf("Usage: \n");
+       printf("./EXAMPLE <nThreads> \n");
+       return -1;
+    }
+
+    int nThreads =  atoi(argv[1]);
+
     gaspi::segment::Segment segment( static_cast<size_t>(1) << 28);
 
 
@@ -62,24 +71,34 @@ main(int argc, char* argv[])
     //  myVect_int[i] =  randmG_int.generateRandomNumber();      
     //}
 
-    //compressed_exchange::ComprExRunLengths<int>
-    compressed_exchange::ComprExTopK<int>
-      cmprex_int(runtime, context, segment, localSize);
 
-    const int * pRestsV = cmprex_int.entryPointerRestsVector();
-    //*
-    // threades andf pining
-    const int nCores = 8; 
+    // thread´s pining
+    const int nCores = 8; // seislab, sandy-Bridge
     std::unique_ptr<int[]> pinPattern = 
               std::unique_ptr<int[]> (new int [nCores]);    
-    for(int i = 0; i < nCores; i++) { // sandy-bridge,..
-      if(i % 2 == 0) pinPattern[i] = i*2;
-      if(i % 2 == 1) pinPattern[i] = i;
+    if(nCores < nThreads) {  // can not pin the threads !!!
+       throw std::runtime_error (
+            " Number of threads per rank mor than the number of cores..");
     }
-    cmprex_int.setPinPatternForTheThreads(nCores, pinPattern);
+    //for(int i = 0; i < nCores; i++) { // sandy-bridge,..
+    //  if(i % 2 == 0) pinPattern[i] = i*2;
+    //  if(i % 2 == 1) pinPattern[i] = i;
+    //}
+    if (static_cast<int>(myRank.get()) % 2 == 0) 
+          for(int i = 0; i < nCores; i++) pinPattern[i] = i*2;
+    if (static_cast<int>(myRank.get()) % 2 == 1) 
+          for(int i = 0; i < nCores; i++) pinPattern[i] = i*2+1;
+
+    //compressed_exchange::ComprExRunLengths<int>
+    compressed_exchange::ComprExTopK<int>
+      cmprex_int(runtime, context, segment, localSize, 
+                                  nThreads, pinPattern.get());
+
+    const int * pRestsV = cmprex_int.entryPointerRestsVector();
+
     //*/
 
-const int nSweeps = 3; 
+    const int nSweeps = 1; //3; 
 for(int ii = 0; ii < nSweeps; ii++) {  
 
   context.barrier();
@@ -119,12 +138,15 @@ for(int ii = 0; ii < nSweeps; ii++) {
 
 context.barrier();
 
-
     if(myRank == srcRank) {
       cmprex_int.compress_and_p2pVectorWriteRemote(
-		  myVect_int, myTopK, destRank, tag);
+      	  myVect_int, myTopK, destRank, tag);
+
+   
+//cmprex_int.printAuxiliaryInfoVector("/scratch/stoyanov/comprEx/run");
     } //myRank == srcRank  
 
+    
     if(myRank == destRank) {
             cmprex_int.p2pVectorGetRemote(
       		  myVect_int, srcRank, tag);
@@ -136,8 +158,8 @@ context.barrier();
       }//for
       printf("\n"); 
     }// if(myRank == destRank)
-
-        
+    
+  
     if(myRank == srcRank) {
         printf("\n"); 
         for(int i = 0; i < localSize; i++) {
