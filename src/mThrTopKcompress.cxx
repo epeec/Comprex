@@ -28,11 +28,6 @@ namespace compressed_exchange {
     , _pinPattern(pinPattern)
     , _startIdx_thr()
     , _startIdx_comprsdV_thr()
-      //, _signumFlag_thr()
-      //, _runLengthsVectSize_thr()
-      //, _shrinkedVectSize_thr()
-      //, _runLengthsVect_thr()
-      //, _shrinkedVect_thr()
   {
 
      allocateThreadRelatedArrays();
@@ -41,12 +36,10 @@ namespace compressed_exchange {
 
      partitionTheCompressedVector(_shrinkedSize);
 
-printf("\n [%d] MultiThreadedTopK-constructor, start %d threads \n",
-       _rank, _numThreads);
-
-
-for(int i = 0; i < 10; i++) printf("\n _restsVec[%d]=%d  origVect[%d]=%d", 
-         i, _restsVector[i], i, _origVector[i]);
+//printf("\n [%d] MultiThreadedTopK-constructor, start %d threads \n",
+//       _rank, _numThreads);
+//for(int i = 0; i < 10; i++) printf("\n _restsVec[%d]=%d  origVect[%d]=%d", 
+//         i, _restsVector[i], i, _origVector[i]);
   }
 
   
@@ -150,7 +143,7 @@ for(int i = 0; i < 10; i++) printf("\n _restsVec[%d]=%d  origVect[%d]=%d",
   MultiThreadedTopK<VarTYPE>::setThreadParameters_compress(int threadIdx)
   {
 
-    _pThreadParams_compress[threadIdx].threadIdx = threadIdx;
+     _pThreadParams_compress[threadIdx].threadIdx = threadIdx;
      _pThreadParams_compress[threadIdx].pClassMThrTopK = this;
   }
 
@@ -159,43 +152,32 @@ for(int i = 0; i < 10; i++) printf("\n _restsVec[%d]=%d  origVect[%d]=%d",
   void 
   MultiThreadedTopK<VarTYPE>::classThreadRoutine_compress(int threadID)
   {
-    printf("\n [%d] thread:%d starts compression \n", _rank, threadID);
-
-    //printf("\n [%d] pint thread:%d to coreID:%d, start compression \n", 
-    //    _rank, threadID,  _pinPattern[threadID]);
-
- 
-    // pin the thread [ if requested (set a global flag ?!) }
-    //pinThisThread(threadID, _pinPattern[threadID]);
- /*
- printf("\n [%d] thread:%d pinned to coreID:%d \n", 
-        _rank, threadID,  _pinPattern[threadID]);
+     // pin the thread [ if requested (set a global flag ?!) }
+    if(_pinPattern != NULL ) {
+      //printf("\n [%d] pint thread:%d to coreID:%d, start compression \n", 
+      //  _rank, threadID,  _pinPattern[threadID]);
+      pinThisThread(threadID, _pinPattern[threadID] );
+    }  
 
     // resize the thread-own work-vector _vectPairs_thr[threadID]
     int workSize_thisThread = _startIdx_thr[threadID+1]
                                       - _startIdx_thr[threadID];
     (_vectPairs_thr[threadID]).resize(workSize_thisThread);
 
-printf("\n [%d] thread:%d this-thread-> wrkSize_vactPairs:%d  start_in_idx:%d start_ou_idx:%d \n", 
+    /*
+printf("\n [%d] thread:%d this-thread-> wrkSize_vactPairs:%d  start_in_idx:%d start_outp_idx:%d \n", 
        _rank, threadID, workSize_thisThread, 
      _startIdx_thr[threadID],  _startIdx_comprsdV_thr[threadID] );
 
- printf("\n tI:%d  aaaaaaaaaa before printing ----------------\n", threadID);
- printf("\n tI:%d  aaaaaaaaaaa before printing ----------------\n", threadID);
 
- //if(threadID == 0) {
- printf("\n  before printing ----------------\n");
- printf("\n  before printing ----------------\n");
-
-for(int i = 0; i < 10; i++) printf("\n thr:%d _restsVec[%d]=%d  origVect[%d]=%d", 
-        threadID, i, _restsVector[i], i, _origVector[i]);
-
+if(threadID == 0) {
  printf("\n----------------\n");
 for(int i = 0; i < 10; i++) printf("\n thr:%d _restsVec[%d]=%d  origVect[%d]=%d", 
 	 threadID, i, _restsVector[i], i,  _origVector[i]);
  printf("\n----------------\n");
- //}//if(threadID == 0) {
- 
+}//if(threadID == 0) {
+    */
+
     // fill-in the data for this thread and and sort
     for(int i = 0; i < workSize_thisThread; i++) {
       int glbIdx = _startIdx_thr[threadID] + i; 
@@ -204,20 +186,17 @@ for(int i = 0; i < 10; i++) printf("\n thr:%d _restsVec[%d]=%d  origVect[%d]=%d"
       (_vectPairs_thr[threadID])[i].val = _restsVector[glbIdx];
     }
  
-printf("\n [%d] thread:%d after setting  this-thread-vectPairs, sort now \n", 
-	   _rank, threadID);
-printf("\n [%d] thread:%d after setting  this-thread-vectPairs, sort now \n", 
-	   _rank, threadID);
-
-
+//printf("\n [%d] thread:%d after setting  this-thread-vectPairs, sort now \n", 
+//	   _rank, threadID);
 
     // now sort the items in _vectPairs_thr[threadID]   
- std::sort((_vectPairs_thr[threadID]).begin(), 
+    std::sort((_vectPairs_thr[threadID]).begin(), 
 	   (_vectPairs_thr[threadID]).end(),  sortPredicate_absValue);
 
-    
+
+    /*    
 typedef typename std::vector<PairIndexValue<VarTYPE> >::const_iterator 
-                                                               MyIterType;
+                                                        MyIterType;
 int cntr = 0;    
 for ( MyIterType it = (_vectPairs_thr[threadID]).begin(); 
        it != (_vectPairs_thr[threadID]).end(); ++it) {
@@ -229,31 +208,30 @@ for ( MyIterType it = (_vectPairs_thr[threadID]).begin();
   printf("\n tI:%d sorted own-vactPairs[%d]  ->glbIdx:%d ->(orig_)val:%d",
 	 threadID, cntr, it->idx, it->val);
        cntr++;  
-}//  
-
+}// for ( MyIterType it = 
+    */
 
     // copy the first (#nOutItems) number of items to the output vector
     int nOutItems =  _startIdx_comprsdV_thr[threadID+1] 
                                 - _startIdx_comprsdV_thr[threadID]; 
 
-printf("\n [%d] thread:%d this-thread-nOutItems:%d, write in the out vect (sz:%d)\n", 
-       _rank, threadID, nOutItems, _shrinkedSize);
+//printf("\n [%d] thread:%d this-thread-nOutItems:%d, write in the out vect (sz:%d)\n", 
+//       _rank, threadID, nOutItems, _shrinkedSize);
 
     for(int i = 0; i < nOutItems; i++) {
       int glbIdx = _startIdx_comprsdV_thr[threadID]+i;
 
+      /*
 printf("\n [%d] thr:%d lclI:%d glbI:%d vPairsGlb[%d].idx=%d VPairsGlb[%d].val=%d  \n", 
        _rank, threadID, i, glbIdx, glbIdx, 
        (_vectPairs_thr[threadID])[i].idx, glbIdx, 
        (_vectPairs_thr[threadID])[i].val);
+      */
 
       _vecPairsGlb[glbIdx].idx = (_vectPairs_thr[threadID])[i].idx;
       _vecPairsGlb[glbIdx].val = (_vectPairs_thr[threadID])[i].val;
     } 
- */
-printf("\n [%d] thread:%d thread-routine over\n", 
-	   _rank, threadID);
-
+ 
   }
     
 
@@ -277,22 +255,9 @@ printf("\n [%d] thread:%d thread-routine over\n",
 
   template <class VarTYPE>
   void
-  MultiThreadedTopK<VarTYPE>::compress(//VarTYPE  topK_percents,    
+  MultiThreadedTopK<VarTYPE>::compress(
   	        std::vector< PairIndexValue <VarTYPE> > & glbShrinkedVect )
-  //MultiThreadedTopK<VarTYPE>::compress(int  rank, int nThreads)
-  //
-  // Just sketching the idea here, for the real implementations search, say, for
-  // "passing template class member function to pthread_create"
-  //
   {
-
-
-     //_topK_percents = topK_percents; // obsolete
-
-     // here can not work with an std::vector class variable, use a local one 
-     //std::vector< PairIndexValue <VarTYPE> > & gShrinkedVect = 
-     //	                                                 glbShrinkedVect;
-
      for(int i=0;  i < _numThreads; i++)  setThreadParameters_compress(i);
      
      int stat;
@@ -311,8 +276,6 @@ printf("\n [%d] thread:%d thread-routine over\n",
        if(stat != 0) printf("  err joining thread %d \n",  i);
      }
      
-    printf("\n [%d] the threads have been joined \n", _rank);
-
   }
 
   template <class VarTYPE>
@@ -321,10 +284,6 @@ printf("\n [%d] thread:%d thread-routine over\n",
      int shrinkedSize // size of the compressed ("source") vector
    , std::vector< PairIndexValue <VarTYPE> > & glbShrinkedVect  // source vect
    , std::unique_ptr<VarTYPE []>  & vector  )  // destination vector
-  //
-  // Just sketching here the idea, for the real implementations search, say, for
-  // "passing template class member function to pthread_create"
-  //
   {
      _shrinkedSize = shrinkedSize;
      _pPairsVect = glbShrinkedVect.data();  

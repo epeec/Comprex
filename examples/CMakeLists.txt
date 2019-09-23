@@ -29,12 +29,3 @@ target_link_libraries (example1
                            ibverbs
 			   rt)
 
-#target_link_libraries (example2 
-#                           LINK_PUBLIC "-static-libstdc++"
-#                           ComprEx 
-#			   GaspiCxx
-#			   ${GPI2_LIBRARIES} 
-#			   pthread 
-#                           ibverbs
-#			   rt)
-

@@ -18,7 +18,7 @@ namespace compressed_exchange {
 	      , gaspi::segment::Segment & segment
 	      , int origSize   // size of the vectors to work with
 	      , int nThreads
-	      , const int* _pinPattern
+	      , const int* pinPattern
 	      ) 
         : 
     _type()
@@ -35,7 +35,7 @@ namespace compressed_exchange {
      , _auxInfoVectr()
      , _buffSizeBytes(0)
      , _nThreads(nThreads)
-     , _pinPattern()
+     , _pinPattern(pinPattern)
      , _pThreads()
    {
       _restsVector =  std::unique_ptr< VarTYPE[] > (new VarTYPE [_origSize]);
@@ -45,6 +45,7 @@ namespace compressed_exchange {
                std::unique_ptr< pthread_t [] > (new pthread_t [_nThreads] );
       }
       flushTheRestsVector();
+
    }
    
    template <class VarTYPE>

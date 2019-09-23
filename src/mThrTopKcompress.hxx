@@ -96,10 +96,6 @@ namespace compressed_exchange {
 
 
        // compress
-
-       //VarTYPE _topK_percents; // obsolete, instead _shrinkedSize given
-
-       //ThreadParmeters_compress<VarTYPE> *_pThreadParams_compress;
        std::unique_ptr< ThreadParmeters_compress<VarTYPE> [] >
                                             _pThreadParams_compress;
  
@@ -136,7 +132,6 @@ namespace compressed_exchange {
 		   , VarTYPE * restsVector
 		   , int shrinkedSize
                    , std::vector<PairIndexValue<VarTYPE> > & vecPairs
-		    //, VarTYPE topK_percents  
 		   , int nThreads
                    , pthread_t * pThreads
 		   , const int* pinPattern = NULL
@@ -149,7 +144,6 @@ namespace compressed_exchange {
     void classThreadRoutine_uncompress(int threadID);
 
     void compress( 
-    //		  //  VarTYPE  topK_percents,    
     		std::vector< PairIndexValue <VarTYPE> > & glbShrinkedVect);
 
     //void compress( int rank, int nThreads);
@@ -172,17 +166,15 @@ namespace compressed_exchange {
     int threadID = pPars->threadIdx;
     MultiThreadedTopK<VarTYPE> *pClassInstance =   pPars->pClassMThrTopK;
 
-    printf("\n tI:%d in the outer-static-thread roitine", threadID);
+    //printf("\n tI:%d in the outer-static-thread roitine", threadID);
     pClassInstance->classThreadRoutine_compress(threadID);
     
   }
   
   template <class VarTYPE>
   static void *thread_func_uncompressTopK(void *args) {
-    //MultiThreadedTopK<VarTYPE> *t = 
-    //               reinterpret_cast<MultiThreadedTopK<VarTYPE> *>(p);
-     //if (t)
-     //   t->Run();
+
+
   }
  
 } // namespace compressed_exchange  

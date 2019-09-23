@@ -14,15 +14,6 @@
 
 
 #include  <GaspiCxx/GaspiCxx.hpp>
-/*
-#include <GaspiCxx/Runtime.hpp>
-#include <GaspiCxx/Context.hpp>
-#include <GaspiCxx/group/Group.hpp>
-#include <GaspiCxx/segment/Segment.hpp>
-#include <GaspiCxx/singlesided/write/SourceBuffer.hpp>
-#include <GaspiCxx/singlesided/write/TargetBuffer.hpp>
-#include <GaspiCxx/utility/ScopedAllocation.hpp>
-*/
 
 #include <mThrRLEcompress.hxx>
 #include <mThrTopKcompress.hxx>
@@ -231,29 +222,6 @@ namespace compressed_exchange {
 
   }; // class ComprExRunLengths 
 
-  /* // in mThreTopKcompress.hxx
-  template <class VarTYPE> 
-  struct PairIndexValue {
-      int idx;
-      VarTYPE val;
-  };
-  */
-
-  //---------- dms test, ComprExTopK + thread_dunc
-  // forward declarations
-  template <class VarTYPE>
-  class ComprExTopK;
-   
-  template <class VarTYPE>
-  static void *thread_func_extrn_comprTopK(void *args);
-
-  template <class VarTYPE>
-  struct ThreadParamsTopK{
-    int threadID;
-    ComprExTopK<VarTYPE> *pTstClass; 
-  };
-
-  //----- end 
 
   template <class VarTYPE>
   class ComprExTopK: public ComprEx<VarTYPE> {
@@ -267,21 +235,6 @@ namespace compressed_exchange {
 
       // work-vector
       std::vector<PairIndexValue<VarTYPE> > _vectPairs;
-
-
-
-       //--- dms tests start, ComprTopK+threads
-       //int _nThreads;  // defined in the base class
-       ThreadParamsTopK<VarTYPE> *_pThrParams;
-
-       void setThreadParams(int threadID)
-       {
-	 _pThrParams[threadID].threadID = threadID;
-         _pThrParams[threadID].pTstClass = this;
-       }  
-
-       //--- dms tests start, ComprTopK+threads
-
 
       static bool sortPredicate_absValue(const PairIndexValue<VarTYPE> & obj1, 
 			                 const PairIndexValue<VarTYPE> & obj2)
@@ -333,74 +286,9 @@ namespace compressed_exchange {
 	       std::unique_ptr<VarTYPE []> const & vector // pointer to the vector
 	       , VarTYPE topK_percents        // top K-percents of the items to be transferred
 	       , gaspi::group::Rank  destRank// destination rank
-               , int tag);                     // message tag
-   
-    
-
-      void compressOnly_threaded_test(
-	    //std::unique_ptr<VarTYPE []> const & vector // pointer to the vector
-            //, VarTYPE topK_percents  // top K-percents of the items to be transferred
-	    //, gaspi::group::Rank  destRank// destination rank
-	    //, int tag                     // message tag
-            //, 
-            int nThreads);
-
-
- 
-    //-------- dms test,  ComprTopK+threads starts here
-       void classMembr_threadFunc(int threadID)
-       {
-         int rank =  static_cast<int>(ComprEx<VarTYPE>::_gpiCxx_context.rank().get());
-	 printf("\n [%d] thread:%d in classMember-thread-fuct \n", rank, threadID);
-       }
-
-      void spawnTheThreads()
-      {
-
-         for(int i=0;  i < ComprEx<VarTYPE>::_nThreads; i++)  setThreadParams(i);
-     
-         int stat;
-         for(int i = 0; i < ComprEx<VarTYPE>::_nThreads; i++) {
-             stat = pthread_create( &(ComprEx<VarTYPE>::_pThreads[i]), NULL, 
-              (thread_func_extrn_comprTopK<VarTYPE>), 
-	      static_cast<void *> ( &(_pThrParams[i])) );
-	     // /*(void *) &(_pThreadParams_compress[i])*/NULL);
-       
-             if(stat != 0) printf(" err creating thread %d \n",  i);
-         }
-     
-         void *rslt;
-         for(int i = 0; i < ComprEx<VarTYPE>::_nThreads; i++) {
-            stat = pthread_join(ComprEx<VarTYPE>::_pThreads[i], &rslt);
-            if(stat != 0) printf("  err joining thread %d \n",  i);
-         }
-        
-      }
-
-    //-------- dms test end,  ComprTopK+threads
-
+               , int tag);                     // message tag      
 
  }; // class ComprExTopK
-
-
-  //--------- dms test addition, ComprExTopK-threaded 
-  template <class VarTYPE>
-  static void *thread_func_extrn_comprTopK(void *args) {
-   
-    ThreadParamsTopK<VarTYPE> *pPars =
-      static_cast<struct ThreadParamsTopK<VarTYPE> *> (args);
-            
-    int threadID = pPars->threadID;
-    ComprExTopK<VarTYPE> *pTstClass =   pPars->pTstClass;
-
-    printf("\n [%d] tI:%d in the extrn-static-thread roitine\n", pTstClass->rank(), threadID);
-    pTstClass->classMembr_threadFunc(threadID);  
-
-    return NULL;
-
-  }//static void *thread_func_extrn_gpicxx
-
-  //------- end dms test addition --
 
 
   template <class VarTYPE>
@@ -410,40 +298,6 @@ namespace compressed_exchange {
   };//class ComprExSparseIdx 
 
 
-  //==================
-  /*
-   template  <class VarTYPE> 
-   class  MultiThreadedTopK; // forward declaration
-  
-  template <class VarTYPE> 
-  struct  ThreadParmeters_compress
-   {
-
-     int threadIdx;
-
-     MultiThreadedTopK<VarTYPE> *pClassMThrTopK;
-
-     //..    
-   }; //ThreadParmeters_compress
-
-
-  template <class VarTYPE>
-  static void *thread_func_compressTopK(void *args) {
-
-    printf("\n in the extrn thread routine \n");
-    //
-    struct ThreadParmeters_compress<VarTYPE> *pPars =
-    static_cast<struct ThreadParmeters_compress<VarTYPE> *> (args);
-            
-    int threadID = pPars->threadIdx;
-    MultiThreadedTopK<VarTYPE> *pClassInstance =   pPars->pClassMThrTopK;
-
-    printf("\n tI:%d in the outer-static-thread roitine", threadID);
-    pClassInstance->classThreadRoutine_compress(threadID);
-    //
-   }
-  */
-  //===========
 
 }  // end namespace compressed_exchange
 
