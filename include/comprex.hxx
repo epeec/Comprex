@@ -268,7 +268,7 @@ namespace compressed_exchange {
                    , gaspi::Context & context
 	           , gaspi::segment::Segment & segment
 	           , int origSize   // size of the vectors to work with
-                   , int nThreads = 0
+                   , int nThreads = 1
 	           , const int* pinPattern = NULL
                  );
 

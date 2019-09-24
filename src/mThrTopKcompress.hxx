@@ -102,7 +102,10 @@ namespace compressed_exchange {
        // uncompress
        const PairIndexValue<VarTYPE > *_pPairsVect;
 
-       ThreadParmeters_uncompress<VarTYPE> *_pThreadParams_uncompress;
+       //ThreadParmeters_uncompress<VarTYPE> *_pThreadParams_uncompress;
+       std::unique_ptr< ThreadParmeters_uncompress<VarTYPE> [] >
+                                            _pThreadParams_uncompress;
+
 
        VarTYPE* _destVector;
 
@@ -131,6 +134,35 @@ namespace compressed_exchange {
 		   , const VarTYPE * origVector
 		   , VarTYPE * restsVector
 		   , int shrinkedSize
+                   , std::vector<PairIndexValue<VarTYPE> > & vecPairs
+		   , int nThreads
+                   , pthread_t * pThreads
+		   , const int* pinPattern = NULL
+		   );
+
+
+      // Another constructor, to be called in the ComprExTopK-constructor
+      // and not in ComprExTopK::compress_and_p2pVectorWriteRemote(..).
+      // This variant has (eventually) advantages but needs some rewritting.
+      // Leave it for later on..
+      //
+      // Then compress(..), see below, should first call 
+      //        calculateNumberOfItemsToSend(topK_percents);
+      // and in general compress(..) should be re-defined as 
+      // void compress( 
+      //     const VarTYPE * origVector
+      //   , int shrinkedSize
+      //   , std::vector< PairIndexValue <VarTYPE> > & glbShrinkedVect);
+      //
+      // The most important point: Design such a constructor which is
+      // to be used  both for the compression and the de-compression,
+      // put it then in the  ComprExTopK-constructor
+      MultiThreadedTopK(
+		    int rank
+		   ,  int origSize  
+		    //, const VarTYPE * origVector
+		   , VarTYPE * restsVector  
+		    //, int shrinkedSize
                    , std::vector<PairIndexValue<VarTYPE> > & vecPairs
 		   , int nThreads
                    , pthread_t * pThreads
@@ -174,6 +206,13 @@ namespace compressed_exchange {
   template <class VarTYPE>
   static void *thread_func_uncompressTopK(void *args) {
 
+    struct ThreadParmeters_uncompress<VarTYPE> *pPars =
+    static_cast<struct ThreadParmeters_uncompress<VarTYPE> *> (args);
+            
+    int threadID = pPars->threadIdx;
+    MultiThreadedTopK<VarTYPE> *pClassInstance =   pPars->pClassMThrTopK;
+
+    pClassInstance->classThreadRoutine_uncompress(threadID);
 
   }
  

@@ -73,32 +73,34 @@ main(int argc, char* argv[])
 
 
     // thread´s pining
-    const int nCores = 8; // seislab, sandy-Bridge
+    const int nCores = 8; // seislab, sandy-Bridge, NUMA-aware GPI
     std::unique_ptr<int[]> pinPattern = 
               std::unique_ptr<int[]> (new int [nCores]);    
     if(nCores < nThreads) {  // can not pin the threads !!!
        throw std::runtime_error (
-            " Number of threads per rank mor than the number of cores..");
+            " Number of threads per rank higher than the number of cores..");
     }
-    //for(int i = 0; i < nCores; i++) { // sandy-bridge,..
-    //  if(i % 2 == 0) pinPattern[i] = i*2;
-    //  if(i % 2 == 1) pinPattern[i] = i;
-    //}
     if (static_cast<int>(myRank.get()) % 2 == 0) 
           for(int i = 0; i < nCores; i++) pinPattern[i] = i*2;
     if (static_cast<int>(myRank.get()) % 2 == 1) 
           for(int i = 0; i < nCores; i++) pinPattern[i] = i*2+1;
 
-    //compressed_exchange::ComprExRunLengths<int>
+    // with pin-pattern, pin the threads     
     compressed_exchange::ComprExTopK<int>
       cmprex_int(runtime, context, segment, localSize, 
                                   nThreads, pinPattern.get());
+    
+    // without pin-pattern, do not pin, i.e. pinPattern = NULL by default 
+    //compressed_exchange::ComprExTopK<int>
+    //  cmprex_int(runtime, context, segment, localSize, nThreads);
+    
+    // single-threaded by default, also no pin-pattern
+    //compressed_exchange::ComprExTopK<int>
+    //  cmprex_int(runtime, context, segment, localSize); 
+      
+    const int * pRestsV = cmprex_int.entryPointerRestsVector();    
 
-    const int * pRestsV = cmprex_int.entryPointerRestsVector();
-
-    //*/
-
-    const int nSweeps = 1; //3; 
+    const int nSweeps = 3; //3; 
 for(int ii = 0; ii < nSweeps; ii++) {  
 
   context.barrier();

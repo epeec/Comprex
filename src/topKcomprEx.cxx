@@ -216,10 +216,45 @@ namespace compressed_exchange {
    void ComprExTopK<VarTYPE>::fillInVectorFromLocalStructs(
                                       std::unique_ptr<VarTYPE []> & vector)
    {
-     int idx; 
-     for(int i = 0; i < ComprEx<VarTYPE>::_shrinkedSize; i++) {
-       vector[_vectPairs[i].idx] = _vectPairs[i].val;
+
+     if(ComprEx<VarTYPE>::_nThreads == 1) {
+        int idx; 
+        for(int i = 0; i < ComprEx<VarTYPE>::_shrinkedSize; i++) {
+          vector[_vectPairs[i].idx] = _vectPairs[i].val;
+        }
      }
+     else  if(ComprEx<VarTYPE>::_nThreads > 1 ) {
+       /*
+       // need another constructor, see the comments below
+       _mThrTopK = std::unique_ptr<MultiThreadedTopK<VarTYPE> > 
+	  (new MultiThreadedTopK<VarTYPE> (
+            static_cast<int> ( ComprEx<VarTYPE>::_gpiCxx_context.rank().get() )
+	  , this->_origSize  // no need of this but may remain
+	  //, vector.get() //  NULL, (input vector to be compressed) NOT needed here
+	  , ComprEx<VarTYPE>::_restsVector.get() // NULL, not needed here but may stay
+	  //, ComprEx<VarTYPE>::_shrinkedSize // obsolete here, set it in uncompress()
+	  , _vectPairs // obsolete here, set it in uncompress(..)
+	  , ComprEx<VarTYPE>::_nThreads
+          , ComprEx<VarTYPE>::_pThreads.get()
+          , ComprEx<VarTYPE>::_pinPattern					          )
+         );  
+
+         _mThrTopK->uncompress(
+               ComprEx<VarTYPE>::_shrinkedSize
+	     , _vectPairs
+	     , vector );
+	 */
+         // for now use the old, single-threaded code
+         int idx; 
+         for(int i = 0; i < ComprEx<VarTYPE>::_shrinkedSize; i++) {
+           vector[_vectPairs[i].idx] = _vectPairs[i].val;
+         }
+
+     }// else if(ComprEx<VarTYPE>::_nThreads > 1 ) {
+     else {
+       throw std::runtime_error (
+            "For this number of threads top-K-percents de-compression not implemented ..");
+     } 
        
    }
 
@@ -265,7 +300,7 @@ namespace compressed_exchange {
 
          _mThrTopK->compress(_vectPairs);
        
-     }
+     } // else if(ComprEx<VarTYPE>::_nThreads > 1 ) {
      else {
        throw std::runtime_error (
             "For this number of threads top-K-percents compression not implemented ..");

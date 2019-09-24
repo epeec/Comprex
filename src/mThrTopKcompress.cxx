@@ -28,6 +28,12 @@ namespace compressed_exchange {
     , _pinPattern(pinPattern)
     , _startIdx_thr()
     , _startIdx_comprsdV_thr()
+      //
+    , _vectPairs_thr()
+    , _pThreadParams_compress()
+    , _pPairsVect()
+    , _pThreadParams_uncompress()
+    , _destVector()
   {
 
      allocateThreadRelatedArrays();
@@ -42,7 +48,48 @@ namespace compressed_exchange {
 //         i, _restsVector[i], i, _origVector[i]);
   }
 
+
+  template <class VarTYPE>
+  MultiThreadedTopK<VarTYPE>::MultiThreadedTopK(
+                   int rank
+		   , int origSize
+		   //, const VarTYPE * origVector
+                   , VarTYPE * restsVector
+                   //int shrinkedSize
+                   , std::vector<PairIndexValue<VarTYPE> > & vecPairs
+		   , int nThreads
+                   , pthread_t * pThreads
+                   , const int* pinPattern
+                   )
+    :
+      _rank(rank)
+    , _origSize(origSize)
+    , _origVector(NULL)
+    , _restsVector(restsVector)
+    , _shrinkedSize(0) 
+    , _vecPairsGlb(vecPairs)
+    , _numThreads(nThreads)
+    , _thread(pThreads)
+    , _pinPattern(pinPattern)
+    , _startIdx_thr()
+    , _startIdx_comprsdV_thr()
+      //
+    , _vectPairs_thr()
+    , _pThreadParams_compress()
+    , _pPairsVect()
+    , _pThreadParams_uncompress()
+    , _destVector()
+  {
+
+     allocateThreadRelatedArrays();
   
+     //partitionTheOriginalVector();
+     //partitionTheCompressedVector(_shrinkedSize);
+
+  }
+
+
+ 
   template <class VarTYPE>
   MultiThreadedTopK<VarTYPE>::~MultiThreadedTopK()
   {
@@ -59,6 +106,10 @@ namespace compressed_exchange {
            (new ThreadParmeters_compress<VarTYPE> [_numThreads]);
 
     
+    _pThreadParams_uncompress = 
+        std::unique_ptr<ThreadParmeters_uncompress<VarTYPE> []> 
+           (new ThreadParmeters_uncompress<VarTYPE> [_numThreads]);
+
     _startIdx_thr = std::unique_ptr<int []> (new int [_numThreads+1]);
 
     _startIdx_comprsdV_thr = std::unique_ptr<int []> (new int [_numThreads+1]);
@@ -240,6 +291,12 @@ printf("\n [%d] thr:%d lclI:%d glbI:%d vPairsGlb[%d].idx=%d VPairsGlb[%d].val=%d
   MultiThreadedTopK<VarTYPE>::classThreadRoutine_uncompress(int threadID)
   {
 
+     // pin the thread [ if requested (set a global flag ?!) }
+    if(_pinPattern != NULL ) {
+      //printf("\n [%d] pint thread:%d to coreID:%d, start compression \n", 
+      //  _rank, threadID,  _pinPattern[threadID]);
+      pinThisThread(threadID, _pinPattern[threadID] );
+    }  
 
   }
 
@@ -248,7 +305,8 @@ printf("\n [%d] thr:%d lclI:%d glbI:%d vPairsGlb[%d].idx=%d VPairsGlb[%d].val=%d
   void 
   MultiThreadedTopK<VarTYPE>::setThreadParameters_uncompress(int threadIdx)
   {
-
+     _pThreadParams_uncompress[threadIdx].threadIdx = threadIdx;
+     _pThreadParams_uncompress[threadIdx].pClassMThrTopK = this;
   }
 
 
