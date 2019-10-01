@@ -12,7 +12,7 @@ This library - supposedly - meets the needs of Machine Learning Applications.
 Requirements:
 -------------
  (i) cmake-version > 3.6 ( presently build using 3.9.3) 
- (ii) c++ 14 (presently with gcc-5.2.0 on seislab)
+ (ii) c++ 14 (presently intel parallel studio 2019 on seislab)
 
 Building comprex
 ----------------

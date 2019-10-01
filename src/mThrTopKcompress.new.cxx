@@ -11,7 +11,7 @@ namespace compressed_exchange {
 		   , const VarTYPE * origVector
                    , VarTYPE * restsVector
                    , int shrinkedSize
-                   , std::vector<PairIndexValue<VarTYPE> > & vecPairs
+                   //, std::vector<PairIndexValue<VarTYPE> > & vecPairs
 		   , int nThreads
                    , pthread_t * pThreads
                    , const int* pinPattern
@@ -22,7 +22,7 @@ namespace compressed_exchange {
     , _origVector(origVector)
     , _restsVector(restsVector)
     , _shrinkedSize(shrinkedSize) 
-    , _vecPairsGlb(vecPairs)
+      //, _vecPairsGlb(vecPairs)
     , _numThreads(nThreads)
     , _thread(pThreads)
     , _pinPattern(pinPattern)
@@ -49,13 +49,14 @@ namespace compressed_exchange {
   }
 
 
-  
   template <class VarTYPE>
   MultiThreadedTopK<VarTYPE>::MultiThreadedTopK(
                    int rank
 		   , int origSize
-                   , int shrinkedSize
-                   , std::vector<PairIndexValue<VarTYPE> > & vecPairs
+		   //, const VarTYPE * origVector
+                   , VarTYPE * restsVector
+                   //int shrinkedSize
+                   //, std::vector<PairIndexValue<VarTYPE> > & vecPairs
 		   , int nThreads
                    , pthread_t * pThreads
                    , const int* pinPattern
@@ -64,9 +65,9 @@ namespace compressed_exchange {
       _rank(rank)
     , _origSize(origSize)
     , _origVector(NULL)
-    , _restsVector(NULL)
-    , _shrinkedSize(shrinkedSize) 
-    , _vecPairsGlb(vecPairs)
+    , _restsVector(restsVector)
+    , _shrinkedSize(0) 
+      //, _vecPairsGlb(vecPairs)
     , _numThreads(nThreads)
     , _thread(pThreads)
     , _pinPattern(pinPattern)
@@ -83,9 +84,49 @@ namespace compressed_exchange {
      allocateThreadRelatedArrays();
   
      //partitionTheOriginalVector();
-     partitionTheCompressedVector(_shrinkedSize);
+     //partitionTheCompressedVector(_shrinkedSize);
 
   }
+
+
+  // common construct for both compression- and expansion- phases
+  template <class VarTYPE>
+  MultiThreadedTopK<VarTYPE>::MultiThreadedTopK(
+		    int rank
+		   , int origSize  
+		    //, std::vector<PairIndexValue<VarTYPE> > && vecPairs
+		   , int nThreads
+                   , pthread_t * pThreads
+		   , const int* pinPattern
+                   )
+    :
+      _rank(rank)
+    , _origSize(origSize)
+    , _origVector(NULL)
+    , _restsVector(NULL)
+    , _shrinkedSize(0) 
+      //, _vecPairsGlb(vecPairs)
+      // , _pVecPairsGlb()
+    , _numThreads(nThreads)
+    , _thread(pThreads)
+    , _pinPattern(pinPattern)
+    , _startIdx_thr()
+    , _startIdx_comprsdV_thr()
+      //
+    , _vectPairs_thr()
+    , _pThreadParams_compress()
+    , _pPairsVect()
+    , _pThreadParams_uncompress()
+    , _destVector()
+  {
+     // needed for both compress- and uncompress-
+     allocateThreadRelatedArrays(); 
+
+     // needed for compression only, but does not hurt the uncompress-
+     partitionTheOriginalVector();
+
+  }
+
  
   template <class VarTYPE>
   MultiThreadedTopK<VarTYPE>::~MultiThreadedTopK()
@@ -166,8 +207,8 @@ namespace compressed_exchange {
 
       int ret = pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
       if (ret != 0) {
-      	std::cout  << " rank:" << _rank << " thread[" << threadIdx 
-      		  << "], ERROR setting affinity mask !!!, errNo:" 
+	std::cout  << " rank:" << _rank << " thread[" << threadIdx 
+		  << "], ERROR setting affinity mask !!!, errNo:" 
                   << ret << std::endl;
       }
 
@@ -178,11 +219,9 @@ namespace compressed_exchange {
                   << ret << std::endl;
       }
       
-      if (CPU_ISSET(coreID, &cpuset)) {
-	//printf(" [%d]  coreID:%d in cpuset, associated with thread: %d\n", 
-	//	_rank, coreID, threadIdx);
-      } 
-       
+      if (CPU_ISSET(coreID, &cpuset)) 
+         printf(" [%d]  coreID:%d in cpuset, associated with thread: %d\n", 
+		_rank, coreID, threadIdx);
   }
 
 
@@ -203,6 +242,7 @@ namespace compressed_exchange {
   void 
   MultiThreadedTopK<VarTYPE>::classThreadRoutine_compress(int threadID)
   {
+     // pin the thread [ if requested (set a global flag ?!) }
     if(_pinPattern != NULL ) {
       //printf("\n [%d] pint thread:%d to coreID:%d, start compression \n", 
       //  _rank, threadID,  _pinPattern[threadID]);
@@ -279,8 +319,15 @@ printf("\n [%d] thr:%d lclI:%d glbI:%d vPairsGlb[%d].idx=%d VPairsGlb[%d].val=%d
        (_vectPairs_thr[threadID])[i].val);
       */
 
-       _vecPairsGlb[glbIdx].idx = (_vectPairs_thr[threadID])[i].idx;
-       _vecPairsGlb[glbIdx].val = (_vectPairs_thr[threadID])[i].val;
+
+      // _vecPairsGlb[glbIdx].idx = (_vectPairs_thr[threadID])[i].idx;
+      //_vecPairsGlb[glbIdx].val = (_vectPairs_thr[threadID])[i].val;
+       myPair.idx = (_vectPairs_thr[threadID])[i].idx;
+       myPair.val = (_vectPairs_thr[threadID])[i].val;
+       //std::memcpy((_pVectPairsGlb+glbIdx), &myPair, sizeof(PairIndexValue<VarTYPE>));
+       //_pVectPairsGlb[glbIdx] =   myPair;
+      // _pVectPairsGlb[glbIdx].idx = (_vectPairs_thr[threadID])[i].idx;
+      //_pVectPairsGlb[glbIdx].val = (_vectPairs_thr[threadID])[i].val;
     } 
  
   }
@@ -292,16 +339,13 @@ printf("\n [%d] thr:%d lclI:%d glbI:%d vPairsGlb[%d].idx=%d VPairsGlb[%d].val=%d
   {
 
      // pin the thread [ if requested (set a global flag ?!) }
-     if(_pinPattern != NULL ) {
-       //printf("\n [%d] pint thread:%d to coreID:%d, start compression \n", 
-       //  _rank, threadID,  _pinPattern[threadID]);
-       pinThisThread(threadID, _pinPattern[threadID] );
-     }
-  
-         for(int i = _startIdx_comprsdV_thr[threadID]; 
-                 i < _startIdx_comprsdV_thr[threadID+1]; i++) {
-           _destVector[_vecPairsGlb[i].idx] = _vecPairsGlb[i].val;
-         }
+    if(_pinPattern != NULL ) {
+      //printf("\n [%d] pint thread:%d to coreID:%d, start compression \n", 
+      //  _rank, threadID,  _pinPattern[threadID]);
+      pinThisThread(threadID, _pinPattern[threadID] );
+        
+    }  
+
   }
 
 
@@ -317,7 +361,8 @@ printf("\n [%d] thr:%d lclI:%d glbI:%d vPairsGlb[%d].idx=%d VPairsGlb[%d].val=%d
 
   template <class VarTYPE>
   void
-  MultiThreadedTopK<VarTYPE>::compress()
+  MultiThreadedTopK<VarTYPE>::compress(
+  	        std::vector< PairIndexValue <VarTYPE> > & glbShrinkedVect )
   {
      for(int i=0;  i < _numThreads; i++)  setThreadParameters_compress(i);
      
@@ -329,7 +374,42 @@ printf("\n [%d] thr:%d lclI:%d glbI:%d vPairsGlb[%d].idx=%d VPairsGlb[%d].val=%d
        
        if(stat != 0) printf(" err creating thread %d \n",  i);
      }
-   
+
+     
+     void *rslt;
+     for(int i = 0; i < _numThreads; i++) {
+       stat = pthread_join(_thread[i], &rslt);
+       if(stat != 0) printf("  err joining thread %d \n",  i);
+     }
+     
+  }
+
+  template <class VarTYPE>
+  void
+  MultiThreadedTopK<VarTYPE>::compress(
+   		 const VarTYPE * origVector
+               , VarTYPE * restsVector 
+	       , int shrinkedSize
+	       , PairIndexValue <VarTYPE> * pGlbShrinkedVect)
+  {
+     
+     _origVector  = origVector;
+     _restsVector = restsVector;
+     _shrinkedSize = shrinkedSize;
+     _pVectPairsGlb = pGlbShrinkedVect;
+
+     for(int i=0;  i < _numThreads; i++)  setThreadParameters_compress(i);
+     
+     int stat;
+     for(int i = 0; i < _numThreads; i++) {
+       stat = pthread_create( &(_thread[i]), NULL, 
+              (thread_func_compressTopK<VarTYPE>), 
+	      static_cast<void *> ( &(_pThreadParams_compress[i])) );
+       
+       if(stat != 0) printf(" err creating thread %d \n",  i);
+     }
+
+     
      void *rslt;
      for(int i = 0; i < _numThreads; i++) {
        stat = pthread_join(_thread[i], &rslt);
@@ -341,17 +421,23 @@ printf("\n [%d] thr:%d lclI:%d glbI:%d vPairsGlb[%d].idx=%d VPairsGlb[%d].val=%d
 
   template <class VarTYPE>
   void
-  MultiThreadedTopK<VarTYPE>::uncompress(
-             std::unique_ptr<VarTYPE []>  & vector  )  // destination vector
+  MultiThreadedTopK<VarTYPE>::uncompress(               
+     int shrinkedSize // size of the compressed ("source") vector
+   , std::vector< PairIndexValue <VarTYPE> > & glbShrinkedVect  // source vect
+   , std::unique_ptr<VarTYPE []>  & vector  )  // destination vector
   {
+     _shrinkedSize = shrinkedSize;
+     _pPairsVect = glbShrinkedVect.data();  
      _destVector = vector.get(); 
+
+     //...
 
       for(int i=0;  i < _numThreads; i++) setThreadParameters_uncompress(i);
 
       int stat;
       for(int i = 0; i < _numThreads; i++) {
         stat = pthread_create( &(_thread[i]), NULL, 
-	          &(thread_func_uncompressTopK<VarTYPE>), 
+	          &(thread_func_compressTopK<VarTYPE>), 
 		  (void *) &(_pThreadParams_uncompress[i]));
 
           if(stat != 0) printf(" err creating thread %d \n",  i);

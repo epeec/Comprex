@@ -31,10 +31,7 @@ namespace compressed_exchange {
    {
 
      int threadIdx;
-
      MultiThreadedTopK<VarTYPE> *pClassMThrTopK;
-
-     //..    
    }; //ThreadParmeters_compress
 
   template <class VarTYPE> 
@@ -71,7 +68,7 @@ namespace compressed_exchange {
        // Reference to the global (shrinked) vector of pairs <idx, value>
        // This is the "output" vector, result of the m-threaded compression
        std::vector<PairIndexValue<VarTYPE> > & _vecPairsGlb;
-
+       //PairIndexValue<VarTYPE> * _pVectPairsGlb;
 
        // number of threads, pin_pattern
        // If no pin-pattern has been provided by the "user"
@@ -102,7 +99,6 @@ namespace compressed_exchange {
        // uncompress
        const PairIndexValue<VarTYPE > *_pPairsVect;
 
-       //ThreadParmeters_uncompress<VarTYPE> *_pThreadParams_uncompress;
        std::unique_ptr< ThreadParmeters_uncompress<VarTYPE> [] >
                                             _pThreadParams_uncompress;
 
@@ -128,46 +124,48 @@ namespace compressed_exchange {
 
     public:
 
+      // constructor used for the compression-phase
+      // 
+      // Note: vecPairs is a reference to ComprExTopK::_vectPairs
+      // Threrefore:
+      //  -> call this constructor only after ComprExTopK::_vectPairs
+      //     has been instantiated (and even resized), see 
+      //     ComprExTopK<VarTYPE>::compress_and_p2pVectorWriteRemote()
+      //
+      //  Note that this class modifies  ComprExTopK::_vectPairs,
+      //  thus, we need a reference to it and this reference should be
+      //  instantiated here, in the constructor
+      //  Note also that a pointer here (calling std::vector::data() on
+      //   ComprExTopK::_vectPairs) will not help, we need a reference.
       MultiThreadedTopK(
 		    int rank
 		   ,  int origSize
 		   , const VarTYPE * origVector
 		   , VarTYPE * restsVector
 		   , int shrinkedSize
-                   , std::vector<PairIndexValue<VarTYPE> > & vecPairs
+		   , std::vector<PairIndexValue<VarTYPE> > & vecPairs
 		   , int nThreads
                    , pthread_t * pThreads
 		   , const int* pinPattern = NULL
 		   );
 
-
-      // Another constructor, to be called in the ComprExTopK-constructor
-      // and not in ComprExTopK::compress_and_p2pVectorWriteRemote(..).
-      // This variant has (eventually) advantages but needs some rewritting.
-      // Leave it for later on..
-      //
-      // Then compress(..), see below, should first call 
-      //        calculateNumberOfItemsToSend(topK_percents);
-      // and in general compress(..) should be re-defined as 
-      // void compress( 
-      //     const VarTYPE * origVector
-      //   , int shrinkedSize
-      //   , std::vector< PairIndexValue <VarTYPE> > & glbShrinkedVect);
-      //
-      // The most important point: Design such a constructor which is
-      // to be used  both for the compression and the de-compression,
-      // put it then in the  ComprExTopK-constructor
+    
+      // constructor used for the expansion-phase  
+      // Note: vecPairs is a reference to ComprExTopK::_vectPairs
+      // Threrefore:
+      //  -> call this constructor only after ComprExTopK::_vectPairs
+      //     has been instantiated (and even resized) in the 
+      //     ComprExTopK-routines
       MultiThreadedTopK(
 		    int rank
 		   ,  int origSize  
-		    //, const VarTYPE * origVector
-		   , VarTYPE * restsVector  
-		    //, int shrinkedSize
-                   , std::vector<PairIndexValue<VarTYPE> > & vecPairs
+		   , int shrinkedSize
+		   , std::vector<PairIndexValue<VarTYPE> > & vecPairs
 		   , int nThreads
                    , pthread_t * pThreads
 		   , const int* pinPattern = NULL
 		   );
+
 
      ~MultiThreadedTopK();
 
@@ -175,15 +173,9 @@ namespace compressed_exchange {
     void classThreadRoutine_compress(int threadID);
     void classThreadRoutine_uncompress(int threadID);
 
-    void compress( 
-    		std::vector< PairIndexValue <VarTYPE> > & glbShrinkedVect);
+    void compress( );
 
-    //void compress( int rank, int nThreads);
-
-    void uncompress(
-               int shrinkedSize
-	     , std::vector< PairIndexValue <VarTYPE> > & glbShrinkedVect
-	     , std::unique_ptr<VarTYPE []>  & vector );
+    void uncompress( std::unique_ptr<VarTYPE []>  & vector );
       
 
   }; // class MultiThreadedTopK

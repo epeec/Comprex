@@ -224,31 +224,22 @@ namespace compressed_exchange {
         }
      }
      else  if(ComprEx<VarTYPE>::_nThreads > 1 ) {
-       /*
+       
        // need another constructor, see the comments below
        _mThrTopK = std::unique_ptr<MultiThreadedTopK<VarTYPE> > 
 	  (new MultiThreadedTopK<VarTYPE> (
             static_cast<int> ( ComprEx<VarTYPE>::_gpiCxx_context.rank().get() )
 	  , this->_origSize  // no need of this but may remain
 	  //, vector.get() //  NULL, (input vector to be compressed) NOT needed here
-	  , ComprEx<VarTYPE>::_restsVector.get() // NULL, not needed here but may stay
-	  //, ComprEx<VarTYPE>::_shrinkedSize // obsolete here, set it in uncompress()
+	  //, ComprEx<VarTYPE>::_restsVector.get() // NULL, not needed here but may stay
+	  , ComprEx<VarTYPE>::_shrinkedSize // obsolete here, set it in uncompress()
 	  , _vectPairs // obsolete here, set it in uncompress(..)
 	  , ComprEx<VarTYPE>::_nThreads
           , ComprEx<VarTYPE>::_pThreads.get()
           , ComprEx<VarTYPE>::_pinPattern					          )
          );  
 
-         _mThrTopK->uncompress(
-               ComprEx<VarTYPE>::_shrinkedSize
-	     , _vectPairs
-	     , vector );
-	 */
-         // for now use the old, single-threaded code
-         int idx; 
-         for(int i = 0; i < ComprEx<VarTYPE>::_shrinkedSize; i++) {
-           vector[_vectPairs[i].idx] = _vectPairs[i].val;
-         }
+         _mThrTopK->uncompress( vector );
 
      }// else if(ComprEx<VarTYPE>::_nThreads > 1 ) {
      else {
@@ -276,7 +267,6 @@ namespace compressed_exchange {
         compressVectorSingleThreaded(vector, topK_percents);
      }
      else if(ComprEx<VarTYPE>::_nThreads > 1 ) {
-       //...
        // First calculate the global size of the final shrinked vector.
        // This value is stored in ComprEx::_shrinkedSize, it is required
        // by the MultiThreadedTopK-class constructor.
@@ -298,7 +288,7 @@ namespace compressed_exchange {
           , ComprEx<VarTYPE>::_pinPattern					          )
          );  
 
-         _mThrTopK->compress(_vectPairs);
+       _mThrTopK->compress();
        
      } // else if(ComprEx<VarTYPE>::_nThreads > 1 ) {
      else {

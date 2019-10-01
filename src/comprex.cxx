@@ -261,7 +261,6 @@ namespace compressed_exchange {
                                         tag).waitForCompletion();
       targetBuff.waitForCompletion();
 
-      //deCompressVector(targetBuff, vector);
       deCompressVector_inLocalStructs(targetBuff);
       fillInVectorFromLocalStructs(vector);
 
