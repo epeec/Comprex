@@ -225,15 +225,13 @@ namespace compressed_exchange {
      }
      else  if(ComprEx<VarTYPE>::_nThreads > 1 ) {
        
-       // need another constructor, see the comments below
+       // need another constructor than in the compress- case
        _mThrTopK = std::unique_ptr<MultiThreadedTopK<VarTYPE> > 
 	  (new MultiThreadedTopK<VarTYPE> (
             static_cast<int> ( ComprEx<VarTYPE>::_gpiCxx_context.rank().get() )
 	  , this->_origSize  // no need of this but may remain
-	  //, vector.get() //  NULL, (input vector to be compressed) NOT needed here
-	  //, ComprEx<VarTYPE>::_restsVector.get() // NULL, not needed here but may stay
-	  , ComprEx<VarTYPE>::_shrinkedSize // obsolete here, set it in uncompress()
-	  , _vectPairs // obsolete here, set it in uncompress(..)
+	  , ComprEx<VarTYPE>::_shrinkedSize //
+	  , _vectPairs 
 	  , ComprEx<VarTYPE>::_nThreads
           , ComprEx<VarTYPE>::_pThreads.get()
           , ComprEx<VarTYPE>::_pinPattern					          )
