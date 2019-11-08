@@ -4,7 +4,7 @@ import numpy as np
 import numpy.ctypeslib as npct
 
 script_dir = os.path.dirname(__file__)
-lib_dir = os.path.join(script_dir,'../build/src/libComprEx.so')
+lib_dir = os.path.join(script_dir,'./build/src/libPyGPI.so')
 #libcomprex = ctypes.cdll.LoadLibrary(lib_dir)
 
 data_t = ctypes.c_float

@@ -2,7 +2,7 @@ import ctypes
 import os
 import numpy as np
 script_dir = os.path.dirname(__file__)
-lib_dir = os.path.join(script_dir,'../build/src/libComprEx.so')
+lib_dir = os.path.join(script_dir,'./build/src/libPyGPI.so')
 libgpi = ctypes.cdll.LoadLibrary(lib_dir)
 
 

@@ -1,9 +1,9 @@
 import sys
-#sys.path.append('/u/l/loroch/PROGRAMMING/comprex/')
+sys.path.append('..')
 import ComprEx
 import GaspiEx
-import pyGPI as gpi
-from pyGPI import gaspi_printf
+import Gpi as gpi
+from Gpi import gaspi_printf
 import ctypes
 import numpy as np
 

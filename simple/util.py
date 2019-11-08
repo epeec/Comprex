@@ -4,8 +4,8 @@ import tensorflow as tf
 
 import gpi_env
 import GaspiEx
-from pyGPI import gaspi_printf
-import pyGPI
+from Gpi import gaspi_printf
+import Gpi
 
 def weights_to_blob(_model):
     model_size = _model.count_params()
@@ -137,7 +137,7 @@ def ringAllreduce(data, comm, tag=0):
 def gpi_allreduce(data, comm, tag=0):
     def func(data):
         #return ringAllreduce(data, comm, tag)
-        return pyGPI.gaspi_allreduce_floatsum(data, gpi_env.gaspi_context.get())
+        return Gpi.gaspi_allreduce_floatsum(data, gpi_env.gaspi_context.get())
     return tf.py_func(func=func, inp=[data], Tout=data.dtype, name="gpi_allreduce")
 
 

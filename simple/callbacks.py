@@ -1,8 +1,8 @@
 import ComprEx
 import GaspiEx
-import pyGPI
+import Gpi
 import gpi_env
-from pyGPI import gaspi_printf
+from Gpi import gaspi_printf
 
 from tensorflow.python.client import timeline
 

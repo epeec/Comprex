@@ -1,10 +1,10 @@
 import sys
-sys.path.append('/home/loroch/PROJECTS/comprex/python')
+sys.path.append('../pyGPI')
 
 import ComprEx as comprex
-import pyGPI as gpi
+import Gpi as gpi
 import gpi_env
-from pyGPI import gaspi_printf
+from Gpi import gaspi_printf
 
 import tensorflow as tf
 import numpy as np
