@@ -92,6 +92,7 @@ class Comprex(object):
         self.obj = libcomprex.Comprex_new(runtime, context, segment, size)
 
     def __del__(self):
+        print("Comprex __del__ called")
         libcomprex.Comprex_del(self.obj)
 
     def setThreshold(self, threshold):

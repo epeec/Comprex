@@ -1,10 +1,15 @@
 import ctypes
 import os
 import numpy as np
+import numpy.ctypeslib as npct
 script_dir = os.path.dirname(__file__)
 lib_dir = os.path.join(script_dir,'./build/src/libPyGPI.so')
-libgpi = ctypes.cdll.LoadLibrary(lib_dir)
+#libgpi = ctypes.cdll.LoadLibrary(lib_dir)
 
+data_t = ctypes.c_float
+np_data_t_p = npct.ndpointer(dtype=np.float32, ndim=1, flags='CONTIGUOUS')
+
+libgpi = npct.load_library(lib_dir, ".")
 
 # gaspi::Runtime* Gaspi_Runtime_new()
 libgpi.Gaspi_Runtime_new.argtypes = [] #[ctypes.c_void_p]
@@ -41,7 +46,7 @@ libgpi.Gaspi_isRuntimeAvailable.argtypes = [ctypes.c_void_p]
 libgpi.Gaspi_isRuntimeAvailable.restype = ctypes.c_bool
 
 # void Gaspi_Allreduce_floatsum(float* output, const float* input, int size, gaspi::Context* context)
-libgpi.Gaspi_Allreduce_floatsum.argtypes = [ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.c_int, ctypes.c_void_p]
+libgpi.Gaspi_Allreduce_floatsum.argtypes = [np_data_t_p, np_data_t_p, ctypes.c_int, ctypes.c_void_p]
 libgpi.Gaspi_Allreduce_floatsum.restype = ctypes.c_void_p
 
 # int Gaspi_Allreduce_Elem_Max()
@@ -146,19 +151,20 @@ def gaspi_printf(message):
 def gaspi_allreduce_floatsum(_input, context):
     try:
         old_shape = _input.shape
-        array = _input.flatten().tolist()
-        size = len(array)
+        in_vec = _input.flatten()
+        size = _input.size
     except:
         raise RuntimeError("gaspi_allreduce_floatsum expects numpy array as input!")
     #print("Transmission size %d"%(size))
-    in_vec = (ctypes.c_float*size)(*array)
-    out_vec = (ctypes.c_float*size)()
+    #in_vec = (ctypes.c_float*size)(*array)
+    #out_vec = (ctypes.c_float*size)()
+    out_vec = np.ndarray([size], dtype=np.float32)
     try:
         libgpi.Gaspi_Allreduce_floatsum(out_vec, in_vec, size, context)
     except:
         raise RuntimeError("Gaspi Allreduce error!")
-    output = np.array([ out_vec[i] for i in range(size)],dtype=np.float32)
-    output = np.reshape(output, old_shape)
+    #output = np.array([ out_vec[i] for i in range(size)],dtype=np.float32)
+    output = np.reshape(out_vec, old_shape)
     return output
 
 def gaspi_allreduce_elem_max():

@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 3.6)
-project (ComprEx)
+project (PyGPI)
 
 set (BASE_DIR "/home/loroch/PROJECTS")
 

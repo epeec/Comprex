@@ -7,9 +7,13 @@ add_library ( PyGPI SHARED
     GaspiEx_C.cpp
  )
  target_link_libraries(PyGPI
-        ${GASPI_CXX_ROOT}/src/libGaspiCxx.a
-        GPI2)
-
+        GaspiCxx
+        GPI2
+        pthread
+        ibverbs
+		rt)
+#${GASPI_CXX_ROOT}/src/libGaspiCxx.a
+#${GPI2_LIBRARIES}
 
 # Make sure the compiler can find include files for our Hello library
 # when other libraries or executables link to Hello

@@ -1,7 +1,7 @@
 import sys
-sys.path.append('/u/l/loroch/PROGRAMMING/comprex/')
-import pyGPI
-from pyGPI import gaspi_printf
+sys.path.append('..')
+import Gpi
+from Gpi import gaspi_printf
 import time
 
 #print("Start")

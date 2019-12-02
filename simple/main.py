@@ -13,11 +13,12 @@ import data
 import model
 import callbacks
 import util
+import gpiOptimizer
 from tensorflow.python.client import timeline
 
 TRACE = True
 
-input_shape = [4,4,3]
+input_shape = [28,28,3]
 batch_size = 128
 
 # get local rank
@@ -44,7 +45,8 @@ tf.keras.backend.set_session(tf.Session(config=config))
 mymodel = model.Net(input_shape=input_shape)
 
 model_size = mymodel.count_params()
-optimizer = util.create_distributed_optimizer(tf.keras.optimizers.SGD(lr=0.0000001), name=None)
+optimizer = gpiOptimizer.create_distributed_optimizer(tf.keras.optimizers.SGD(lr=0.000001), name=None)
+#optimizer = tf.keras.optimizers.SGD(lr=0.000001)
 mymodel.compile(optimizer=optimizer,
               loss=tf.keras.losses.mean_squared_error,
               metrics=['accuracy'],
@@ -64,7 +66,7 @@ callbacks_list.append(callbacks.WriteTrace("timeline_%02d.json"%(myRank), run_me
 
 # train
 verbose= 1 if myRank==0 else 0
-mymodel.fit_generator(data.data_gen(input_shape, batch_size), steps_per_epoch=20, epochs=3, callbacks=callbacks_list, verbose=verbose)
+mymodel.fit_generator(data.data_gen(input_shape, batch_size), steps_per_epoch=60, epochs=5, callbacks=callbacks_list, verbose=verbose)
 
 # output trace
 '''
