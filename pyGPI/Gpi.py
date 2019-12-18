@@ -31,6 +31,9 @@ libgpi.Gaspi_Context_getSize.restype = ctypes.c_int
 # Gaspi_Context_barrier(gaspi::Context* context)
 libgpi.Gaspi_Context_barrier.argtypes = [ctypes.c_void_p]
 libgpi.Gaspi_Context_barrier.restype = ctypes.c_void_p
+# Gaspi_Context_barrier(gaspi::Context* context)
+libgpi.Gaspi_Context_flush.argtypes = [ctypes.c_void_p]
+libgpi.Gaspi_Context_flush.restype = ctypes.c_void_p
 
 # gaspi::segment::Segment* Gaspi_Segment_new(int size)
 libgpi.Gaspi_Segment_new.argtypes = [ctypes.c_int]
@@ -41,8 +44,8 @@ libgpi.Gaspi_Segment_del.restype = ctypes.c_void_p
 libgpi.Gaspi_Printf.argtypes = [ctypes.c_char_p]
 libgpi.Gaspi_Printf.restype = ctypes.c_void_p
 
-# bool Gaspi_isRuntimeAvailable(gaspi::Runtime* self)
-libgpi.Gaspi_isRuntimeAvailable.argtypes = [ctypes.c_void_p]
+# bool Gaspi_isRuntimeAvailable()
+libgpi.Gaspi_isRuntimeAvailable.argtypes = []
 libgpi.Gaspi_isRuntimeAvailable.restype = ctypes.c_bool
 
 # void Gaspi_Allreduce_floatsum(float* output, const float* input, int size, gaspi::Context* context)
@@ -66,19 +69,20 @@ class Gaspi_Runtime(Getable):
         if not Gaspi_Runtime.exists:
             self.obj = libgpi.Gaspi_Runtime_new()
         Gaspi_Runtime.exists=True
+
     def __enter__(self):
         return self
+
     def __del__(self):
         #gaspi_printf("__del__ called on %s"%self)
-        try:
-            if Gaspi_Runtime.exists:
-                libgpi.Gaspi_Runtime_del(self.obj)
-                Gaspi_Runtime.exists=False
-        except:
-            pass
+        if Gaspi_Runtime.exists:
+            libgpi.Gaspi_Runtime_del(self.obj)
+            Gaspi_Runtime.exists=False
+
     def __exit__(self, exception_type, exception_value, traceback):
-        #libgpi.Gaspi_Runtime_del(self.obj)
-        pass
+        if Gaspi_Runtime.exists:
+            libgpi.Gaspi_Runtime_del(self.obj)
+            Gaspi_Runtime.exists=False
 Gaspi_Runtime.exists=False
 
 ###########################
@@ -94,12 +98,11 @@ class Gaspi_Context(Getable):
         return self
     def __del__(self):
         #gaspi_printf("__del__ called on %s"%self)
-        #libgpi.Gaspi_Context_del(self.obj)
-        pass
+        libgpi.Gaspi_Context_del(self.obj)
+
     def __exit__(self, exception_type, exception_value, traceback):
         #gaspi_printf("__exit__ called")
-        #libgpi.Gaspi_Context_del(self.obj)
-        pass
+        libgpi.Gaspi_Context_del(self.obj)
 
     def getRank(self):
         return libgpi.Gaspi_Context_getRank(self.obj)
@@ -117,6 +120,10 @@ class Gaspi_Context(Getable):
         #gaspi_printf("barrier")
         libgpi.Gaspi_Context_barrier(self.obj)
 
+    def flush(self):
+        #gaspi_printf("barrier")
+        libgpi.Gaspi_Context_flush(self.obj)
+
 ###########################
 # Gaspi_Segment
 ###########################
@@ -124,14 +131,16 @@ class Gaspi_Context(Getable):
 class Gaspi_Segment(Getable):
     def __init__(self, size):
         self.obj = libgpi.Gaspi_Segment_new(size)
+
     def __enter__(self):
         return self
+
     def __del__(self):
-        #libgpi.Gaspi_Segment_del(self.obj)
-        pass
+        libgpi.Gaspi_Segment_del(self.obj)
+
     def __exit__(self, exception_type, exception_value, traceback):
-        #libgpi.Gaspi_Segment_del(self.obj)
-        pass
+        libgpi.Gaspi_Segment_del(self.obj)
+
 
 ###########################
 # utilities

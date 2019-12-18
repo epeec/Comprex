@@ -33,6 +33,8 @@ int Gaspi_Context_getSize(gaspi::Context* context) { return static_cast<int>(con
 
 void Gaspi_Context_barrier(gaspi::Context* context) { context->barrier();}
 
+void Gaspi_Context_flush(gaspi::Context* context) { context->flush();}
+
 gaspi::segment::Segment* Gaspi_Segment_new(int size) { return new gaspi::segment::Segment(static_cast<size_t>(size)); }
 void Gaspi_Segment_del(gaspi::segment::Segment* self) {delete self;}
 
@@ -42,8 +44,8 @@ void Gaspi_Printf(const char* msg) {
 
 
 void Gaspi_Allreduce_floatsum(float* const output, float* input, int size, gaspi::Context* context) {
-    gaspi_allreduce( 
-          input, 
+    gaspi_allreduce(
+          input,
           output,
           size,
           GASPI_OP_SUM,

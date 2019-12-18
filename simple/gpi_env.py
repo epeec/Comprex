@@ -1,5 +1,5 @@
 
-import Gpi as gpi
+import pyGPI.Gpi as gpi
 
 # gaspi setup
 global gaspi_runtime

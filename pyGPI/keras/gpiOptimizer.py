@@ -2,11 +2,11 @@ import numpy as np
 import tensorflow.keras as keras
 import tensorflow as tf
 
-import gpi_env
-import GaspiEx
-import ComprEx
-from Gpi import gaspi_printf
-import Gpi
+import pyGPI
+import pyGPI.GaspiEx as GaspiEx
+import pyGPI.ComprEx as ComprEx
+from pyGPI.Gpi import gaspi_printf
+import pyGPI.Gpi as Gpi
 
 
 ################################################################################################
@@ -18,8 +18,8 @@ def comprexAllreduce(data, comprex, comm, tag=0, chief_rank=0):
     data_shape = data.shape
     data = data.flatten()
 
-    myRank = gpi_env.gaspi_context.getRank()
-    numRanks = gpi_env.gaspi_context.getSize()
+    myRank = pyGPI.gaspi_context.getRank()
+    numRanks = pyGPI.gaspi_context.getSize()
     #gaspi_printf("Rang %d of %d enters RingAllreduce"%(myRank, numRanks))
 
     # Allocate the output buffer.
@@ -47,7 +47,7 @@ def comprexAllreduce(data, comprex, comm, tag=0, chief_rank=0):
         comprex.writeRemote(data, chief_rank, tag)
 
     #gaspi_printf("Gather finished")
-    gpi_env.gaspi_context.barrier()
+    pyGPI.gaspi_context.barrier()
 
     if myRank == chief_rank:
         buffer = np.ndarray([data_size])
@@ -62,7 +62,7 @@ def comprexAllreduce(data, comprex, comm, tag=0, chief_rank=0):
         output = np.array(comm.readRemote(data_size, chief_rank, tag))
 
     # wait until update is received
-    gpi_env.gaspi_context.barrier()
+    pyGPI.gaspi_context.barrier()
 
     '''
     # Chief Rank
@@ -108,8 +108,8 @@ def ringAllreduce(data, comm, tag=0):
     data = data.flatten()
     data_size = data.size
 
-    myRank = gpi_env.gaspi_context.getRank()
-    numRanks = gpi_env.gaspi_context.getSize()
+    myRank = pyGPI.gaspi_context.getRank()
+    numRanks = pyGPI.gaspi_context.getSize()
     #gaspi_printf("Rang %d of %d enters RingAllreduce"%(myRank, numRanks))
     #print("Data on Rank %d: %s"%(myRank, str(data)))
     # Partition the elements of the array into N approximately equal-sized chunks, where N is the MPI size.
@@ -165,7 +165,7 @@ def ringAllreduce(data, comm, tag=0):
         segment_recv_start = segment_ends[recv_chunk] - segment_sizes[recv_chunk]
 
         # wait until update is received
-        gpi_env.gaspi_context.barrier()
+        pyGPI.gaspi_context.barrier()
 
         # reduce
         output[ segment_recv_start:segment_ends[recv_chunk] ] += buffer[0:segment_sizes[recv_chunk]]
@@ -194,7 +194,7 @@ def ringAllreduce(data, comm, tag=0):
             comm.writeRemote(segment_send, send_to, tag)
 
         # wait until update is received
-        gpi_env.gaspi_context.barrier()
+        pyGPI.gaspi_context.barrier()
 
         # write
         output[ segment_recv_start:segment_ends[recv_chunk] ] = buffer[0:segment_sizes[recv_chunk]]
@@ -202,7 +202,7 @@ def ringAllreduce(data, comm, tag=0):
 
 
 def gpi_ringAllreduce(data, tag=0):
-    comm = GaspiEx.GaspiEx(gpi_env.gaspi_runtime.get(), gpi_env.gaspi_context.get(), gpi_env.gaspi_segment.get())
+    comm = GaspiEx.GaspiEx(pyGPI.gaspi_runtime.get(), pyGPI.gaspi_context.get(), pyGPI.gaspi_segment.get())
     def func(data):
         return ringAllreduce(data, comm, tag)
     return tf.py_func(func=func, inp=[data], Tout=data.dtype, name="gpi_ringAllreduce")
@@ -210,12 +210,12 @@ def gpi_ringAllreduce(data, tag=0):
 
 def gpi_comprexAllreduce(data, tag=0, chief_rank=0):
     grad_size= np.prod(data.shape)
-    comprex=ComprEx.Comprex(gpi_env.gaspi_runtime.get(), gpi_env.gaspi_context.get(), gpi_env.gaspi_segment.get(), grad_size)
+    comprex=ComprEx.Comprex(pyGPI.gaspi_runtime.get(), pyGPI.gaspi_context.get(), pyGPI.gaspi_segment.get(), grad_size)
     threshold = ComprEx.ThresholdTopK(0.01)
     compressor = ComprEx.CompressorRLE()
     comprex.setThreshold(threshold.get())
     comprex.setCompressor(compressor.get())
-    comm = GaspiEx.GaspiEx(gpi_env.gaspi_runtime.get(), gpi_env.gaspi_context.get(), gpi_env.gaspi_segment.get())
+    comm = GaspiEx.GaspiEx(pyGPI.gaspi_runtime.get(), pyGPI.gaspi_context.get(), pyGPI.gaspi_segment.get())
     def func(data):
         #comprex.resetRests()
         return comprexAllreduce(data, comprex, comm, tag=tag, chief_rank=chief_rank)
@@ -229,7 +229,7 @@ def create_distributed_optimizer(optimizer, name=None):
             if name is None:
                 name = "Distributed%s" % self.__class__.__base__.__name__
             self._name = name
-            #self.comm = GaspiEx.GaspiEx(gpi_env.gaspi_runtime.get(), gpi_env.gaspi_context.get(), gpi_env.gaspi_segment.get())
+            #self.comm = GaspiEx.GaspiEx(pyGPI.gaspi_runtime.get(), pyGPI.gaspi_context.get(), pyGPI.gaspi_segment.get())
             self._get_gradients_used = False
             super(self.__class__, self).__init__(**config)
             #self.communicator = []
@@ -244,7 +244,7 @@ def create_distributed_optimizer(optimizer, name=None):
             """
             self._get_gradients_used = True
             gradients = super(self.__class__, self).get_gradients(loss, params)
-            if gpi_env.gaspi_context.getSize() > 1:
+            if pyGPI.gaspi_context.getSize() > 1:
                 averaged_gradients = []
                 with tf.name_scope(self._name + "_Allreduce"):
                     for iter,grad in enumerate(gradients):
@@ -253,7 +253,7 @@ def create_distributed_optimizer(optimizer, name=None):
                                 grad = tf.convert_to_tensor(grad)
                             grad_size= np.prod(grad.shape)
                             gaspi_printf("Gradient size of layer %d=%d"%(iter, grad_size))
-                            #self.communicator.append( ComprEx.Comprex(gpi_env.gaspi_runtime.get(), gpi_env.gaspi_context.get(), gpi_env.gaspi_segment.get(), grad_size) )
+                            #self.communicator.append( ComprEx.Comprex(pyGPI.gaspi_runtime.get(), pyGPI.gaspi_context.get(), pyGPI.gaspi_segment.get(), grad_size) )
                             avg_grad = gpi_ringAllreduce(grad, tag=iter)#self.communicator[iter])
                             #avg_grad = gpi_comprexAllreduce(grad, tag=iter, chief_rank=0)
                             averaged_gradients.append(avg_grad)
