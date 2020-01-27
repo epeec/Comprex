@@ -1,5 +1,5 @@
 import sys
-sys.path.append('..')
+sys.path.append('..') # find pyGPI
 
 # LeNet for MNIST using Keras and TensorFlow
 import tensorflow as tf
@@ -14,12 +14,28 @@ from pyGPI.Gpi import gaspi_printf
 import pyGPI.keras.callbacks as callbacks
 import pyGPI.keras.gpiOptimizer as gpiOptimizer
 
+from tensorflow.python.client import timeline
+
 import model
+
+class WriteTrace(tf.keras.callbacks.Callback):
+    def __init__(self, filename, run_metadata):
+        super(self.__class__, self).__init__()
+        self.filename = filename
+        self.run_metadata = run_metadata
+        #print("Write Trace enabled")
+
+    def on_train_end(self, batch, logs=None):
+        tl = timeline.Timeline(self.run_metadata.step_stats)
+        ctf = tl.generate_chrome_trace_format()
+        with open(self.filename, 'w') as f:
+            print("Writing timeline %s"%self.filename)
+            f.write(ctf)
 
 def main():
     myRank = pyGPI.gaspi_context.getRank()
     numRanks = pyGPI.gaspi_context.getSize()
-    print(numRanks)
+    #print(numRanks)
 
     # pin GPUs
     config = tf.ConfigProto()

@@ -2,24 +2,8 @@ from pyGPI.GaspiEx import GaspiEx
 import pyGPI
 from pyGPI.Gpi import gaspi_printf
 
-from tensorflow.python.client import timeline
-
 import tensorflow as tf
 import numpy as np
-
-class WriteTrace(tf.keras.callbacks.Callback):
-    def __init__(self, filename, run_metadata):
-        super(self.__class__, self).__init__()
-        self.filename = filename
-        self.run_metadata = run_metadata
-        #print("Write Trace enabled")
-
-    def on_train_end(self, batch, logs=None):
-        tl = timeline.Timeline(self.run_metadata.step_stats)
-        ctf = tl.generate_chrome_trace_format()
-        with open(self.filename, 'w') as f:
-            print("Writing timeline %s"%self.filename)
-            f.write(ctf)
 
 
 class BroadcastInitWeights(tf.keras.callbacks.Callback):
