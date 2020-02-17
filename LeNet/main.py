@@ -12,7 +12,7 @@ import pyGPI
 import pyGPI.Gpi as gpi
 from pyGPI.Gpi import gaspi_printf
 import pyGPI.keras.callbacks as callbacks
-import pyGPI.keras.gpiOptimizer as gpiOptimizer
+from pyGPI.keras import gpiOptimizer
 
 from tensorflow.python.client import timeline
 
@@ -78,6 +78,7 @@ def main():
 
     # Compile the network
     optimizer = tf.keras.optimizers.SGD(lr=0.01)
+    optimizer = gpiOptimizer.create_distributed_optimizer(optimizer)
     lenet.compile(
         loss = "categorical_crossentropy",
         optimizer = optimizer,
@@ -87,7 +88,7 @@ def main():
     # Callbacks
     callbacks_list=[]
     callbacks_list.append(callbacks.BroadcastInitWeights(0))
-    callbacks_list.append(callbacks.WriteTrace("timeline_%02d.json"%(myRank), run_metadata) )
+    callbacks_list.append(WriteTrace("timeline_%02d.json"%(myRank), run_metadata) )
 
     # Train the model
     lenet.fit(
