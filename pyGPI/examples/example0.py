@@ -1,8 +1,8 @@
 import sys
 sys.path.append('..')
 import ComprEx as comprex
-import pyGPI as gpi
-from pyGPI import gaspi_printf
+import Gpi as gpi
+from Gpi import gaspi_printf
 import ctypes
 import numpy as np
 

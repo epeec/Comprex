@@ -40,7 +40,7 @@ def main():
     # pin GPUs
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
-    config.gpu_options.visible_device_list = str(myRank)
+    #config.gpu_options.visible_device_list = str(myRank)
     tf.keras.backend.set_session(tf.Session(config=config))
 
     # trace results (optional)
@@ -77,7 +77,7 @@ def main():
     lenet = model.LeNet()
 
     # Compile the network
-    optimizer = tf.keras.optimizers.SGD(lr=0.01)
+    optimizer = tf.keras.optimizers.SGD(lr=0.01*numRanks)
     optimizer = gpiOptimizer.create_distributed_optimizer(optimizer)
     lenet.compile(
         loss = "categorical_crossentropy",
