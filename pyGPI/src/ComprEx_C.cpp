@@ -26,26 +26,38 @@ void Comprex_setCompressor(ComprEx<data_t>* self, const Compressor<data_t>* comp
 void Comprex_resetRests(ComprEx<data_t>* self){
     self->resetRests();
 }
-void Comprex_flushRests(ComprEx<data_t>* self, int destRank, int tag){
-    self->flushRests(static_cast<gaspi::group::Rank>(destRank), tag);
+void Comprex_flushRests(ComprEx<data_t>* self){
+    self->flushRests();
 }
 void Comprex_getRests(ComprEx<data_t>* self, data_t* vector, int size){
         const std::vector<data_t>* rests = self->getRests_p();
         if(rests->size() != size){
             char error_msg[100];
-            sprintf(error_msg,"Rests of size %d does not match the buffer of size %d!\n", (int)rests->size(), (int)size);
+            sprintf(error_msg,"getRests: Rests of size %d does not match the buffer of size %d!\n", (int)rests->size(), (int)size);
             throw std::runtime_error(error_msg);
         }
         for(int i=0; i<size; ++i){
             vector[i] = (*rests)[i];
         }
 }
-void Comprex_writeRemote(ComprEx<data_t>* self, const data_t* vector, int size, int destRank, int tag) {
+void Comprex_writeRemote(ComprEx<data_t>* self, const data_t* vector, int size) {
     //std::vector<data_t> vec(vector, vector+size);
-    self->writeRemote( vector, size, static_cast<gaspi::group::Rank>(destRank), tag);
+    self->writeRemote( vector, size);
 }
-void Comprex_readRemote(ComprEx<data_t>* self, data_t* vector, int size, int srcRank, int tag) {
-    self->readRemote( vector, size, static_cast<gaspi::group::Rank>(srcRank), tag);
+void Comprex_readRemote(ComprEx<data_t>* self, data_t* vector, int size) {
+    self->readRemote( vector, size);
+}
+
+void Comprex_connectTo(ComprEx<data_t>* self, int srcRank, int targRank, int tag, int size_factor){
+    self->connectTo(static_cast<gaspi::group::Rank>(srcRank), static_cast<gaspi::group::Rank>(targRank), tag, size_factor);
+}
+
+void Comprex_connectTx(ComprEx<data_t>* self, int targRank, int tag, int size_factor){
+    self->connectTx(static_cast<gaspi::group::Rank>(targRank), tag, size_factor);
+}
+
+void Comprex_connectRx(ComprEx<data_t>* self, int srcRank, int tag, int size_factor){
+    self->connectRx(static_cast<gaspi::group::Rank>(srcRank), tag, size_factor);
 }
 
 ///////////////////////

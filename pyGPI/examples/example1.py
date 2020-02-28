@@ -54,12 +54,11 @@ with gpi.Gaspi_Context() as gaspi_context:
     gaspi_printf("Using CompressorRLE")
 
     # create Comprex
-    # cmprex = comprex.Comprex(gaspi_runtime.get(), gaspi_context.get(), gaspi_segment.get(), size)
-    # cmprex.setThreshold(threshold.get())
-    # cmprex.setCompressor(compressor.get())
-    # gaspi_printf("Building comprex")
+    cmprex = comprex.Comprex(gaspi_runtime.get(), gaspi_context.get(), gaspi_segment.get(), size)
+    cmprex.setThreshold(threshold.get())
+    cmprex.setCompressor(compressor.get())
+    gaspi_printf("Building comprex")
 
-    cmprex = GaspiEx(gaspi_runtime.get(), gaspi_context.get(), gaspi_segment.get())
 
     # set connection pattern
     if myRank==srcRank:

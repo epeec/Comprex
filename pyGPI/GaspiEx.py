@@ -41,6 +41,17 @@ libcd.GaspiEx_writeRemote.restype = ctypes.c_void_p
 # void readRemote(GaspiEx<data_t>* self, data_t* vector, int size, int srcRank, int tag)
 libcd.GaspiEx_readRemote.argtypes = [ctypes.c_void_p, np_data_t_p, ctypes.c_int, ctypes.c_int, ctypes.c_int]
 libcd.GaspiEx_readRemote.restype = ctypes.c_void_p
+# void connectTo(GaspiEx<data_t>* self, int srcRank, int targRank, int sizeBytes, int tag)
+libcd.GaspiEx_connectTo.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int]
+libcd.GaspiEx_connectTo.restype = ctypes.c_void_p
+# void GaspiEx_connectTx(GaspiEx<data_t>* self, int targRank, int size, int tag)
+libcd.GaspiEx_connectTx.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_int, ctypes.c_int]
+libcd.GaspiEx_connectTx.restype = ctypes.c_void_p
+# void GaspiEx_connectRx(GaspiEx<data_t>* self, int srcRank, int size, int tag)
+libcd.GaspiEx_connectRx.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_int, ctypes.c_int]
+libcd.GaspiEx_connectRx.restype = ctypes.c_void_p
+
+
 
 class Getable(object):
     def get(self):
@@ -57,13 +68,14 @@ class GaspiEx(object):
     def __del__(self):
         #libgaspiex.GaspiEx_del(self.obj)
         libcd.GaspiEx_del(self.obj)
+        self.obj = None
 
     def writeRemote(self, vector, destRank, tag):
         try:
             #libgaspiex.GaspiEx_writeRemote(self.obj, vec, len(vector), destRank, tag)
             libcd.GaspiEx_writeRemote(self.obj, vector, vector.size, destRank, tag)
         except:
-            raise RuntimeError("GPI error in writeRemote!")
+            raise RuntimeError("GPI error in GaspiEx_writeRemote!")
 
     def readRemote(self, size, srcRank, tag):
         #vec = (data_t*size)()
@@ -73,7 +85,36 @@ class GaspiEx(object):
             #libgaspiex.GaspiEx_readRemote(self.obj, vec, size, srcRank, tag)
             libcd.GaspiEx_readRemote(self.obj, res, size, srcRank, tag)
         except:
-            raise RuntimeError("GPI error in readRemote!")
+            raise RuntimeError("GPI error in GaspiEx_readRemote!")
         #res = [vec[i] for i in range(size)]
         #res = [0]*size
         return res
+
+    def readRemote_vec(self, vector, size, srcRank, tag):
+        #vec = (data_t*size)()
+        #vec = ctypes.POINTER(data_t*self.size)()
+        try:
+            #libgaspiex.GaspiEx_readRemote(self.obj, vec, size, srcRank, tag)
+            libcd.GaspiEx_readRemote(self.obj, vector, size, srcRank, tag)
+        except:
+            raise RuntimeError("GPI error in GaspiEx_readRemote!")
+        #res = [vec[i] for i in range(size)]
+        #res = [0]*size
+
+    def connectTo(self, srcRank, destRank, size, tag):
+        try:
+            libcd.GaspiEx_connectTo(self.obj, srcRank, destRank, size, tag)
+        except:
+            raise RuntimeError("GPI error in GaspiEx_connectTo!")
+
+    def connectTx(self, destRank, size, tag):
+        try:
+            libcd.GaspiEx_connectTx(self.obj, destRank, size, tag)
+        except:
+            raise RuntimeError("GPI error in GaspiEx_connectTx!")
+
+    def connectRx(self, srcRank, size, tag):
+        try:
+            libcd.GaspiEx_connectRx(self.obj, srcRank, size, tag)
+        except:
+            raise RuntimeError("GPI error in GaspiEx_connectRx!")

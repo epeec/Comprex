@@ -127,6 +127,9 @@ protected:
         // sort vector in descending order
         std::sort(vec_copy.begin(), vec_copy.end(), [](VarTYPE x1,VarTYPE x2){return std::abs(x1) > std::abs(x2);} );
         _threshold = (topk_pos<0) ? std::abs((vec_copy)[0])+1 : std::abs((vec_copy)[topk_pos]);
+
+        // std::make_heap(vec_copy->begin(), vec_copy->end()); 
+        // for(int i=0; i<)
     }
   };
 

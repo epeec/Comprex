@@ -38,12 +38,6 @@
 #include <compressor.hxx>
 #include <threshold.hxx>
 
-// compression type
-enum class CompressionType {
-    runLengthEncoding,     // run-length-encoding (RLE)
-    sparseIndexing         // sparse indexing   (SI)
-};
-
 /***************************************
  * ComprEx
  ***************************************/
@@ -52,9 +46,6 @@ class ComprEx {
 protected:
         // compression type
         std::unique_ptr<Compressor<VarTYPE> > compressor;
-
-        // no compression
-        CompressorNone<VarTYPE> compressor_none;
 
         // thresholding function to increase sparsity
         std::unique_ptr<ThresholdFunction<VarTYPE> > threshold;
@@ -71,66 +62,80 @@ protected:
         // vector containing "rests" : the left-over after the communication
         std::vector<VarTYPE> restsVect;
 
-        virtual void communicateDataBufferSize_senderSide( int sizeBytes, gaspi::group::Rank destRank, int tag){
-            //gaspi_printf("srcBuff\n");
-            //if(!gaspi::isRuntimeAvailable()) gaspi_printf("Runtime not available!\n");
+        // communication endpoints
+        gaspi::singlesided::write::SourceBuffer* srcBuff_data;
+        gaspi::singlesided::write::TargetBuffer* targBuff_data;
 
-            //gaspi::segment::Segment gpiCxx_segment(1000);
-            gaspi::singlesided::write::SourceBuffer srcBuff( _gpiCxx_segment, sizeof(int)) ;
+        // source and target of this communication channel
+        gaspi::group::Rank srcRank;
+        gaspi::group::Rank targRank;
 
-            //gaspi_printf("connectTarget\n");
-            srcBuff.connectToRemoteTarget(_gpiCxx_context, destRank, tag).waitForCompletion();
+        // size of the uncompressed vectors
+        // must be known for residual vector
+        int size;
 
-            int* buffEntry = (reinterpret_cast<int*>(srcBuff.address()));
-            *buffEntry =  sizeBytes;
+        // internal buffer size (NOT the size of the communicated data!)
 
-            //gaspi_printf("initTransfer\n");
-            srcBuff.initTransfer(_gpiCxx_context);
-        }
+        // virtual void communicateDataBufferSize_senderSide( int sizeBytes, gaspi::group::Rank destRank, int tag){
+        //     //gaspi_printf("srcBuff\n");
+        //     //if(!gaspi::isRuntimeAvailable()) gaspi_printf("Runtime not available!\n");
 
-        virtual int communicateDataBufferSize_recverSide( gaspi::group::Rank srcRank, int tag){
-            gaspi::singlesided::write::TargetBuffer targBuff( _gpiCxx_segment, sizeof(int)) ;
+        //     //gaspi::segment::Segment gpiCxx_segment(1000);
+        //     gaspi::singlesided::write::SourceBuffer srcBuff( _gpiCxx_segment, sizeof(int)) ;
 
-            targBuff.connectToRemoteSource(_gpiCxx_context, srcRank, tag).waitForCompletion();
+        //     //gaspi_printf("connectTarget\n");
+        //     srcBuff.connectToRemoteTarget(_gpiCxx_context, destRank, tag).waitForCompletion();
 
-            targBuff.waitForCompletion();
+        //     int* buffEntry = (reinterpret_cast<int*>(srcBuff.address()));
+        //     *buffEntry =  sizeBytes;
 
-            int* buffEntry = (reinterpret_cast<int *>(targBuff.address()));
-            return *buffEntry;
-        }
+        //     //gaspi_printf("initTransfer\n");
+        //     srcBuff.initTransfer(_gpiCxx_context);
+        // }
 
-        virtual void sendCompressedVectorToDestRank( const CompressedVector<VarTYPE>* cVect, gaspi::group::Rank destRank , int tag) {
+        // virtual int communicateDataBufferSize_recverSide( gaspi::group::Rank srcRank, int tag){
+        //     gaspi::singlesided::write::TargetBuffer targBuff( _gpiCxx_segment, sizeof(int)) ;
+
+        //     targBuff.connectToRemoteSource(_gpiCxx_context, srcRank, tag).waitForCompletion();
+
+        //     targBuff.waitForCompletion();
+
+        //     int* buffEntry = (reinterpret_cast<int *>(targBuff.address()));
+        //     return *buffEntry;
+        // }
+
+        virtual void sendCompressedVectorToDestRank( const CompressedVector<VarTYPE>* cVect ) {
+            if(!srcBuff_data){
+                throw std::runtime_error("Send issued without connecting to Remote!");
+            }
             int sizeBytes = cVect->calcSizeBytes();
+            // // copy size of compressed vector at the beginning of the buffer
+            // std::memcpy(srcBuff_data->address(), &sizeBytes, sizeof(int));
+            // write compressed vector after the total size
+            // cVect->writeBuffer(srcBuff_data->address()+sizeof(int));
 
-            //gaspi_printf("Communicate Size\n");
-            // first communicate (send to dest rank) the buffer size
-            communicateDataBufferSize_senderSide(sizeBytes, destRank, tag);
-
-            // then communicate the data itself
-            // alloc GaspiCxx source  buffer
-            //gaspi_printf("srcBuffer\n");
-            gaspi::singlesided::write::SourceBuffer srcBuff(_gpiCxx_segment, sizeBytes) ;
-
-            //gaspi_printf("connecting to target\n");
-            srcBuff.connectToRemoteTarget(_gpiCxx_context, destRank, tag).waitForCompletion();
-            cVect->writeBuffer(srcBuff.address());
+            cVect->writeBuffer( srcBuff_data->address() );
+            srcBuff_data->initTransferPart(_gpiCxx_context, sizeBytes, 0);
 
             //gaspi_printf("transfer\n");
-            srcBuff.initTransfer(_gpiCxx_context);
+            // only transfer a part of the buffer
+            // int totalSizeBytes = sizeBytes + sizeof(int);
+            // srcBuff_data->initTransferPart(_gpiCxx_context, totalSizeBytes, 0);
         }
 
-        virtual void getCompressedVectorFromSrcRank(std::unique_ptr<CompressedVector<VarTYPE> >* output, gaspi::group::Rank srcRank, int tag) {
-            // first communicate (get from src rank) the buffer size
-            int sizeBytes=communicateDataBufferSize_recverSide(srcRank, tag);
+        virtual void getCompressedVectorFromSrcRank(std::unique_ptr<CompressedVector<VarTYPE> >* output) {
+            if(!targBuff_data){
+                throw std::runtime_error("Receive issued without connecting to Remote!");
+            }
 
-            // then get  the data itself
-            // alloc GaspiCxx  target- buffer
-            gaspi::singlesided::write::TargetBuffer targetBuff(_gpiCxx_segment, sizeBytes);
+            targBuff_data->waitForCompletion();
 
-            targetBuff.connectToRemoteSource(_gpiCxx_context, srcRank, tag).waitForCompletion();
-            targetBuff.waitForCompletion();
+            // get total size of compressed vector:
+            // int sizeBytes;
+            // std::memcpy(&sizeBytes, targBuff_data->address(), sizeof(int) );
+            // output->get()->loadBuffer
             *output = compressor->getEmptyCompressedVector();
-            output->get()->loadBuffer(targetBuff.address());
+            output->get()->loadBuffer(targBuff_data->address());
         }
 
         void applyRests(std::vector<VarTYPE>* output, const std::vector<VarTYPE>* vector){
@@ -179,11 +184,21 @@ public:
                   _gpiCxx_runtime(runTime),
                   _gpiCxx_context(context),
                   _gpiCxx_segment(segment),
-                  restsVect(std::vector<VarTYPE>(size)) {
+                  restsVect(std::vector<VarTYPE>(size)),
+                  srcRank(-1),
+                  targRank(-1),
+                  size(size){
         resetRests();
+        // srcBuff_data = new  gaspi::singlesided::write::SourceBuffer( _gpiCxx_segment, 0);
+        // targBuff_data= new  gaspi::singlesided::write::TargetBuffer( _gpiCxx_segment, 0);
+        srcBuff_data = NULL;
+        targBuff_data= NULL;
     }
 
-    ~ComprEx() {}
+    ~ComprEx() {
+        if(srcBuff_data) delete srcBuff_data;
+        if(targBuff_data) delete targBuff_data;
+    }
 
     virtual void setCompressor(const Compressor<VarTYPE>& compressor) {
         this->compressor = compressor.copy();
@@ -205,10 +220,10 @@ public:
         }
         //std::memset(static_cast<void *> (_restsVector.data()), 0, _origSize*sizeof(VarTYPE));
     }
-    virtual void flushRests(gaspi::group::Rank destRank, int tag){
+    virtual void flushRests(){
         // send restsVect without applying thresholding
         compressor->compress(&cVect, &restsVect);
-        sendCompressedVectorToDestRank(cVect.get(), destRank, tag);
+        sendCompressedVectorToDestRank(cVect.get());
         resetRests();
     }
     virtual std::vector<VarTYPE> getRests() const{
@@ -219,38 +234,71 @@ public:
         return &restsVect;
     }
 
-    virtual void writeRemote( const std::vector<VarTYPE>* vector, gaspi::group::Rank destRank, int tag) {
+    virtual void writeRemote( const std::vector<VarTYPE>* vector) {
         // apply and update Rests with Threshold
         applyRests(&txVect, vector);
         // send Data
         compressor->compress(&cVect, &txVect);
-        sendCompressedVectorToDestRank(cVect.get(), destRank, tag);
+        sendCompressedVectorToDestRank(cVect.get());
     }
 
-    virtual void writeRemote( const VarTYPE* vector, int size, gaspi::group::Rank destRank, int tag) {
+    virtual void writeRemote( const VarTYPE* vector, int size) {
         // apply and update Rests with Threshold
         applyRests(&txVect, vector, size);
         // send Data
         compressor->compress(&cVect, &txVect);
-        sendCompressedVectorToDestRank(cVect.get(), destRank, tag);
+        sendCompressedVectorToDestRank(cVect.get());
     }
 
-    virtual void readRemote( std::vector<VarTYPE>* vector, gaspi::group::Rank srcRank, int tag) {
-        getCompressedVectorFromSrcRank(&cVect, srcRank, tag);
+    virtual void readRemote( std::vector<VarTYPE>* vector) {
+        getCompressedVectorFromSrcRank(&cVect);
         compressor->decompress(vector, cVect.get());
     }
 
-    virtual void readRemote( VarTYPE* vector, int size, gaspi::group::Rank srcRank, int tag) {
-        getCompressedVectorFromSrcRank(&cVect, srcRank, tag);
-        /*
-        int cVect_size = cVect.get()->uncompressed_size();
-        if(size != cVect_size){
-            char error_msg[100];
-            sprintf(error_msg,"Received Vector of size %d does not match the buffer of size %d!\n", cVect_size, (int)size);
-            throw std::runtime_error(error_msg);
-        }
-        */
+    virtual void readRemote( VarTYPE* vector, int size) {
+        getCompressedVectorFromSrcRank(&cVect);
         compressor->decompress(vector, size, cVect.get());
+    }
+
+
+    void connectTx(gaspi::group::Rank targRank, int tag, int size_factor=1){
+        this->targRank = targRank;
+        if(srcBuff_data) delete srcBuff_data;
+
+        srcBuff_data = new gaspi::singlesided::write::SourceBuffer(_gpiCxx_segment, this->size*sizeof(VarTYPE)*size_factor);
+        auto handle_sbdata(srcBuff_data->connectToRemoteTarget(_gpiCxx_context, targRank, tag));
+        handle_sbdata.waitForCompletion();
+    }
+
+    void connectRx(gaspi::group::Rank srcRank, int tag, int size_factor=1){
+        this->srcRank = srcRank;
+        if(targBuff_data) delete targBuff_data;
+
+        targBuff_data = new gaspi::singlesided::write::TargetBuffer(_gpiCxx_segment, this->size*sizeof(VarTYPE)*size_factor);
+        auto handle_tbdata(targBuff_data->connectToRemoteSource(_gpiCxx_context, srcRank, tag));
+        handle_tbdata.waitForCompletion();
+    }
+
+    // srcRank: receive data from this rank
+    // targRank: send data to this rank
+    void connectTo(gaspi::group::Rank srcRank, gaspi::group::Rank targRank, int tag, int size_factor=1){
+        // set new ranks
+        this->srcRank = srcRank;
+        this->targRank = targRank;
+
+        // cleanup old connection
+        if(srcBuff_data) delete srcBuff_data;
+        if(targBuff_data) delete targBuff_data;
+
+        // gaspi_printf("Data Connection");
+        srcBuff_data = new gaspi::singlesided::write::SourceBuffer(_gpiCxx_segment, this->size*sizeof(VarTYPE)*size_factor);
+        auto handle_sbdata(srcBuff_data->connectToRemoteTarget(_gpiCxx_context, targRank, tag));
+        
+        targBuff_data = new gaspi::singlesided::write::TargetBuffer(_gpiCxx_segment, this->size*sizeof(VarTYPE)*size_factor);
+        auto handle_tbdata(targBuff_data->connectToRemoteSource(_gpiCxx_context, srcRank, tag));
+
+        handle_sbdata.waitForCompletion();
+        handle_tbdata.waitForCompletion();
     }
 
 }; // ComprEx

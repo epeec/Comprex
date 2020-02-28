@@ -17,7 +17,7 @@ def set_default_gaspi_context(context):
 # gaspi segment
 # multiple segments can be created
 global gaspi_segment
-gaspi_segment= gpi.Gaspi_Segment(2**27) # 128 MB default size
+gaspi_segment= gpi.Gaspi_Segment(2**30) # 1 GB default size
 
 def set_default_gaspi_segment(segment):
     del gaspi_segment

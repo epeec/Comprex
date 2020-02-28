@@ -78,12 +78,12 @@ int main(){
                 // write test data
                 print_vector<data_t>("Source Vector", values);
                 print_vector<data_t>("Rests Vector:", rests);
-                cmprex.writeRemote(&values, destRank, tag);
+                cmprex.writeRemote(&values);
             }
             else {
                 // at the end, flush out the rests
                 print_vector<data_t>("Flush Rests Vector:", rests);
-                cmprex.flushRests(destRank, tag);
+                cmprex.flushRests();
             }
             // print Rests Vector after send, because it should be updated
             rests = cmprex.getRests();
@@ -95,7 +95,7 @@ int main(){
         if(myRank == destRank) {
             // get Data from sender
             std::vector<data_t> rxVect(size);
-            cmprex.readRemote(rxVect.data(), rxVect.size(), srcRank, tag);
+            cmprex.readRemote(rxVect.data(), rxVect.size());
             print_vector<data_t>("Received Vector:", rxVect);
         }// if(myRank == destRank)
         context.barrier();

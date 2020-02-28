@@ -12,6 +12,7 @@ include(GNUInstallDirs)
 # switch for enabling unit tests. GTEST_ROOT directory
 # needs to be set.  default: ON
 set (Test OFF)
+set (PROFILE ON)
 
 # set (PYTHON /m/soft/python/3.6.3/bin/python3)
 #set (PYTHON python)
@@ -20,13 +21,19 @@ string(STRIP ${PYTHON} PYTHON)
 
 set (CMAKE_CXX_STANDARD 14)
 set (CMAKE_BUILD_TYPE Release)
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DETI_DOUBLE -DETI_INT -Wall -Wextra -pedantic -fpic")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DETI_DOUBLE -DETI_INT -Wall -pedantic -fpic")
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse")
 
 set (COMPREX_SRC "${CMAKE_SOURCE_DIR}/src")
 set (COMPREX_BUILD "${CMAKE_SOURCE_DIR}/build")
 
 #set (CMAKE_SHARED_LINKER_FLAGS "-Wl,-rpath=/home/work/soft/gcc/5.2.0/lib")
+
+# Enable Profiling with gprof
+if(PROFILE)
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg")
+    set (CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -pg")
+endif()
 
 # add GPI2
 # if GPI-2 has NOT been loaded as a module, then set appropriately
@@ -58,17 +65,5 @@ if (Test)
   add_subdirectory (tests)
 endif (Test)
 
-add_custom_target(nodelist
-               file(WRITE ${COMPREX_BUILD}/nodelist "localhost\nlocalhost\n") )
 
-# create gaspi_run script for python
-# TODO: make it executable automatically (chmod +x)
-file(WRITE ${COMPREX_BUILD}/gaspi_example0_py.sh "#!/bin/bash\nexport PYTHONPATH=$ENV{PYTHONPATH}:${COMPREX_ROOT}/python\ncd ${CMAKE_SOURCE_DIR}/build\n${PYTHON} ${COMPREX_ROOT}/examples/example0.py")
-execute_process( COMMAND chmod +x ${COMPREX_BUILD}/gaspi_example0_py.sh )
-
-file(WRITE ${COMPREX_BUILD}/gaspi_allreduce_py.sh "#!/bin/bash\nexport PYTHONPATH=$ENV{PYTHONPATH}:${COMPREX_ROOT}/python\ncd ${CMAKE_SOURCE_DIR}/build\n${PYTHON} ${COMPREX_ROOT}/examples/allreduce.py")
-execute_process( COMMAND chmod +x ${COMPREX_BUILD}/gaspi_allreduce_py.sh )
-
-file(WRITE ${COMPREX_BUILD}/gaspi_pyGPI_test.sh "#!/bin/bash\nexport PYTHONPATH=$ENV{PYTHONPATH}:${COMPREX_ROOT}/python\ncd ${CMAKE_SOURCE_DIR}/build\n${PYTHON} ${COMPREX_ROOT}/test/pyGPI_test.py")
-execute_process( COMMAND chmod +x ${COMPREX_BUILD}/gaspi_pyGPI_test.sh )
 

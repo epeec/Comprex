@@ -78,11 +78,13 @@ class Gaspi_Runtime(Getable):
         if Gaspi_Runtime.exists:
             libgpi.Gaspi_Runtime_del(self.obj)
             Gaspi_Runtime.exists=False
+            self.obj=None
 
     def __exit__(self, exception_type, exception_value, traceback):
         if Gaspi_Runtime.exists:
             libgpi.Gaspi_Runtime_del(self.obj)
             Gaspi_Runtime.exists=False
+            self.obj=None
 Gaspi_Runtime.exists=False
 
 ###########################
@@ -99,10 +101,12 @@ class Gaspi_Context(Getable):
     def __del__(self):
         #gaspi_printf("__del__ called on %s"%self)
         libgpi.Gaspi_Context_del(self.obj)
+        self.obj=None
 
     def __exit__(self, exception_type, exception_value, traceback):
         #gaspi_printf("__exit__ called")
         libgpi.Gaspi_Context_del(self.obj)
+        self.obj=None
 
     def getRank(self):
         return libgpi.Gaspi_Context_getRank(self.obj)
@@ -137,9 +141,11 @@ class Gaspi_Segment(Getable):
 
     def __del__(self):
         libgpi.Gaspi_Segment_del(self.obj)
+        self.obj=None
 
     def __exit__(self, exception_type, exception_value, traceback):
         libgpi.Gaspi_Segment_del(self.obj)
+        self.obj=None
 
 
 ###########################

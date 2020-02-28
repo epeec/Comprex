@@ -24,10 +24,12 @@ class BroadcastInitWeights(tf.keras.callbacks.Callback):
             for destRank in range(pyGPI.gaspi_context.getSize()):
                 if destRank != self.myRank:
                     #gaspi_printf("Sending blob to %d"%(destRank))
+                    self.comm.connectTx(destRank, self.model_size, self.comm_tag)
                     self.comm.writeRemote(blob, destRank, self.comm_tag)
         # worker node
         else:
-            gaspi_printf("Receiving blob from %d"%(self.srcRank))
+            #gaspi_printf("Receiving blob from %d"%(self.srcRank))
+            self.comm.connectRx(self.srcRank, self.model_size, self.comm_tag)
             blob = self.comm.readRemote(self.model_size, self.srcRank, self.comm_tag)
             self.blob_to_weights(blob)
             #print(self.model.get_weights())

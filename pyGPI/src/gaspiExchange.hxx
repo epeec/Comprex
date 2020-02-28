@@ -52,93 +52,43 @@ protected:
         gaspi::singlesided::write::TargetBuffer* targBuff_size;
         gaspi::singlesided::write::TargetBuffer* targBuff_data;
 
-        bool first_send;
-        bool first_recv;
+        gaspi::group::Rank srcRank;
+        gaspi::group::Rank targRank;
 
-        //void addGpiConnection_destination(gaspi::group::Rank destRank, int size, int tag){}
-
-        //void addGpiConnection_source(){}
+        int size;
 
         virtual void communicateDataBufferSize_senderSide( int sizeBytes, gaspi::group::Rank destRank, int tag){
-            //gaspi_printf("srcBuff\n");
-            //if(!gaspi::isRuntimeAvailable()) gaspi_printf("Runtime not available!\n");
-
-            //gaspi::singlesided::write::SourceBuffer srcBuff( _gpiCxx_segment, sizeof(int));
-            if(first_send) {
-                delete srcBuff_size;
-                srcBuff_size = new gaspi::singlesided::write::SourceBuffer( _gpiCxx_segment, sizeof(int));
-            }
-            //gaspi_printf("connectTarget\n");
-            srcBuff_size->connectToRemoteTarget(_gpiCxx_context, destRank, tag).waitForCompletion();
 
             int* buffEntry = (reinterpret_cast<int *>(srcBuff_size->address()));
             *buffEntry =  sizeBytes;
 
-            //gaspi_printf("initTransfer\n");
+            // gaspi_printf("initTransfer\n");
             srcBuff_size->initTransfer(_gpiCxx_context);
         }
 
         virtual int communicateDataBufferSize_recverSide( gaspi::group::Rank srcRank, int tag){
-            //gaspi::singlesided::write::TargetBuffer targBuff( _gpiCxx_segment, sizeof(int)) ;
-            if(first_recv){
-                delete targBuff_size;
-                targBuff_size = new gaspi::singlesided::write::TargetBuffer( _gpiCxx_segment, sizeof(int));
-            }
-            targBuff_size->connectToRemoteSource(_gpiCxx_context, srcRank, tag).waitForCompletion();
-
+            
+            // gaspi_printf("Getting Data buffer size\n");
             targBuff_size->waitForCompletion();
-
             int* buffEntry = (reinterpret_cast<int *>(targBuff_size->address()));
+            // gaspi_printf("Data buffer size: %d\n",*buffEntry);
             return *buffEntry;
         }
 
         virtual void sendVectorToDestRank( const VarTYPE* vect, int size, gaspi::group::Rank destRank , int tag) {
             int sizeBytes = size * sizeof(VarTYPE);
 
-            // gaspi_printf("Communicate Size (%d Bytes)\n",sizeBytes);
-            // first communicate (send to dest rank) the buffer size
-            communicateDataBufferSize_senderSide(sizeBytes, destRank, tag);
-
-            // for(int i=0; i<size; ++i)
-            //    gaspi_printf("vector[%d]=%#08x\n",i,vect[i]);
-
-            // then communicate the data itself
-            // alloc GaspiCxx source  buffer
-            //gaspi_printf("srcBuffer\n");
-            //gaspi::singlesided::write::SourceBuffer srcBuff(_gpiCxx_segment, sizeBytes);
-            if(first_send){
-                delete srcBuff_data;
-                srcBuff_data = new gaspi::singlesided::write::SourceBuffer(_gpiCxx_segment, sizeBytes);
-            }
             //gaspi_printf("connecting to target\n");
-            srcBuff_data->connectToRemoteTarget(_gpiCxx_context, destRank, tag).waitForCompletion();
             writeBuffer(srcBuff_data->address(), vect, sizeBytes);
 
             //gaspi_printf("transfer\n");
             srcBuff_data->initTransfer(_gpiCxx_context);
-            first_send=false;
         }
 
         virtual int getVectorFromSrcRank( VarTYPE* vect, int size, gaspi::group::Rank srcRank, int tag) {
-            // first communicate (get from src rank) the buffer size
-            int sizeBytes=communicateDataBufferSize_recverSide(srcRank, tag);
-            if(size*sizeof(VarTYPE) < sizeBytes){
-                char error_msg[100];
-                sprintf(error_msg,"Received vector size (%d Bytes) is bigger than the buffer size (%d Bytes)!\n", sizeBytes, size*sizeof(VarTYPE));
-                throw std::runtime_error(error_msg);
-            }
-            // then get  the data itself
-            // alloc GaspiCxx  target- buffer
-            //gaspi::singlesided::write::TargetBuffer targetBuff(_gpiCxx_segment, sizeBytes);
-            if(first_recv){
-                delete targBuff_data;
-                targBuff_data = new gaspi::singlesided::write::TargetBuffer(_gpiCxx_segment, sizeBytes);
-            }
-            targBuff_data->connectToRemoteSource(_gpiCxx_context, srcRank, tag).waitForCompletion();
             targBuff_data->waitForCompletion();
-            loadBuffer(vect, targBuff_data->address(), sizeBytes);
-            first_recv=false;
-            return sizeBytes/sizeof(VarTYPE);
+            loadBuffer(vect, targBuff_data->address(), size*sizeof(VarTYPE));
+            return size;
         }
 
         void writeBuffer(void* dest_buffer, const VarTYPE* src_buffer, int sizeBytes) {
@@ -157,8 +107,9 @@ public:
                 : _gpiCxx_runtime(runTime),
                   _gpiCxx_context(context),
                   _gpiCxx_segment(segment),
-                  first_send(true),
-                  first_recv(true) {
+                  srcRank(-1),
+                  targRank(-1),
+                  size(0) {
         srcBuff_data = new  gaspi::singlesided::write::SourceBuffer( _gpiCxx_segment, 0);
         srcBuff_size = new  gaspi::singlesided::write::SourceBuffer( _gpiCxx_segment, 0);
         targBuff_data= new  gaspi::singlesided::write::TargetBuffer( _gpiCxx_segment, 0);
@@ -177,6 +128,11 @@ public:
         sendVectorToDestRank( vector.data(), vector.size(), destRank, tag);
     }
 
+    virtual void writeRemote( const std::vector<VarTYPE>* vector, gaspi::group::Rank destRank, int tag) {
+        // send Data
+        sendVectorToDestRank( vector->data(), vector->size(), destRank, tag);
+    }
+
     virtual void writeRemote( const VarTYPE* vector, int size, gaspi::group::Rank destRank, int tag) {
         // apply and update Rests with Threshold
         sendVectorToDestRank(vector, size, destRank, tag);
@@ -187,9 +143,78 @@ public:
         return getVectorFromSrcRank(vector.data(), vector.size(), srcRank, tag);
     }
 
+    virtual int readRemote( std::vector<VarTYPE>* vector, gaspi::group::Rank srcRank, int tag) {
+        return getVectorFromSrcRank(vector->data(), vector->size(), srcRank, tag);
+    }
+
     // returns the number of received data elements
     virtual int readRemote( VarTYPE* vector, int size, gaspi::group::Rank srcRank, int tag) {
         return getVectorFromSrcRank(vector, size, srcRank, tag);
+    }
+
+    void connectTx(gaspi::group::Rank targRank, int size, int tag){
+        this->targRank = targRank;
+        this->size = size;
+        delete srcBuff_data;
+        delete srcBuff_size;
+
+        srcBuff_size = new gaspi::singlesided::write::SourceBuffer( _gpiCxx_segment, sizeof(int));
+        auto handle_sbsize(srcBuff_size->connectToRemoteTarget(_gpiCxx_context, targRank, tag));
+        handle_sbsize.waitForCompletion();
+
+        srcBuff_data = new gaspi::singlesided::write::SourceBuffer(_gpiCxx_segment, size*sizeof(VarTYPE));
+        auto handle_sbdata(srcBuff_data->connectToRemoteTarget(_gpiCxx_context, targRank, tag));
+        handle_sbdata.waitForCompletion();
+    }
+
+    void connectRx(gaspi::group::Rank srcRank, int size, int tag){
+        this->srcRank = srcRank;
+        this->size = size;
+        delete targBuff_data;
+        delete targBuff_size;
+
+        targBuff_size = new gaspi::singlesided::write::TargetBuffer( _gpiCxx_segment, sizeof(int));
+        auto handle_tbsize( targBuff_size->connectToRemoteSource(_gpiCxx_context, srcRank, tag) );
+        handle_tbsize.waitForCompletion();
+
+        targBuff_data = new gaspi::singlesided::write::TargetBuffer(_gpiCxx_segment, size*sizeof(VarTYPE));
+        auto handle_tbdata(targBuff_data->connectToRemoteSource(_gpiCxx_context, srcRank, tag));
+        handle_tbdata.waitForCompletion();
+    }
+
+    // srcRank: receive data from this rank
+    // targRank: send data to this rank
+    void connectTo(gaspi::group::Rank srcRank, gaspi::group::Rank targRank, int size, int tag){
+        // set new ranks
+        this->srcRank = srcRank;
+        this->targRank = targRank;
+        this->size = size;
+
+        // cleanup old connection
+        delete srcBuff_data;
+        delete srcBuff_size;
+        delete targBuff_data;
+        delete targBuff_size;
+    
+        // gaspi_printf("Sizes Connection\n");
+        srcBuff_size = new gaspi::singlesided::write::SourceBuffer( _gpiCxx_segment, sizeof(int));
+        auto handle_sbsize(srcBuff_size->connectToRemoteTarget(_gpiCxx_context, targRank, tag));
+        
+        targBuff_size = new gaspi::singlesided::write::TargetBuffer( _gpiCxx_segment, sizeof(int));
+        auto handle_tbsize( targBuff_size->connectToRemoteSource(_gpiCxx_context, srcRank, tag) );
+
+        handle_sbsize.waitForCompletion();
+        handle_tbsize.waitForCompletion();
+
+        // gaspi_printf("Data Connection");
+        srcBuff_data = new gaspi::singlesided::write::SourceBuffer(_gpiCxx_segment, size*sizeof(VarTYPE));
+        auto handle_sbdata(srcBuff_data->connectToRemoteTarget(_gpiCxx_context, targRank, tag));
+        
+        targBuff_data = new gaspi::singlesided::write::TargetBuffer(_gpiCxx_segment, size*sizeof(VarTYPE));
+        auto handle_tbdata(targBuff_data->connectToRemoteSource(_gpiCxx_context, srcRank, tag));
+
+        handle_sbdata.waitForCompletion();
+        handle_tbdata.waitForCompletion();
     }
 
 }; // ComprEx

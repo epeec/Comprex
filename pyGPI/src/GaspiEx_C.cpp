@@ -23,4 +23,16 @@ int GaspiEx_readRemote(GaspiEx<data_t>* self, data_t* vector, int size, int srcR
     return self->readRemote( vector, size, static_cast<gaspi::group::Rank>(srcRank), tag);
 }
 
+void GaspiEx_connectTo(GaspiEx<data_t>* self, int srcRank, int targRank, int size, int tag) {
+    self->connectTo( static_cast<gaspi::group::Rank>(srcRank), static_cast<gaspi::group::Rank>(targRank), size, tag );
+}
+
+void GaspiEx_connectTx(GaspiEx<data_t>* self, int targRank, int size, int tag){
+    self->connectTx( static_cast<gaspi::group::Rank>(targRank), size, tag );
+}
+
+void GaspiEx_connectRx(GaspiEx<data_t>* self, int srcRank, int size, int tag){
+    self->connectRx( static_cast<gaspi::group::Rank>(srcRank), size, tag );
+}
+
 } // extern "C"

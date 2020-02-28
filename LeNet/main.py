@@ -33,6 +33,9 @@ class WriteTrace(tf.keras.callbacks.Callback):
             f.write(ctf)
 
 def main():
+
+    batchsize=64
+
     myRank = pyGPI.gaspi_context.getRank()
     numRanks = pyGPI.gaspi_context.getSize()
     #print(numRanks)
@@ -55,7 +58,7 @@ def main():
 
     num_train_samples = train_data.shape[0]
     num_samples_per_rank = num_train_samples // numRanks
-    print(num_samples_per_rank)
+    #print(num_samples_per_rank)
 
     train_data = train_data[myRank*num_samples_per_rank : (myRank+1)*num_samples_per_rank-1]
     train_labels = train_labels[myRank*num_samples_per_rank : (myRank+1)*num_samples_per_rank-1]
@@ -94,8 +97,8 @@ def main():
     lenet.fit(
         train_data,
         train_labels,
-        batch_size = 64,
-        nb_epoch = 2,
+        batch_size = batchsize,
+        nb_epoch = 1,
         verbose = 1 if myRank==0 else 0,
         callbacks=callbacks_list)
 
