@@ -43,10 +43,10 @@ with gpi.Gaspi_Context() as gaspi_context:
 
     #gaspi_context = gpi.Gaspi_Context()
     # getting memory for GASPI
-    gaspi_segment = gpi.Gaspi_Segment(2**10) # 1 MB
+    gaspi_segment = gpi.Gaspi_Segment(2**30) # 1 GB
 
     # create threshold
-    threshold = comprex.ThresholdTopK(0.2)
+    threshold = comprex.ThresholdTopK(0.01)
     gaspi_printf("Using ThresholdTopK")
 
     # create compressor
@@ -62,9 +62,9 @@ with gpi.Gaspi_Context() as gaspi_context:
 
     # set connection pattern
     if myRank==srcRank:
-        cmprex.connectTx(destRank, size, tag)
+        cmprex.connectTx(destRank, tag, size_factor=2)
     else:
-        cmprex.connectRx(srcRank, size, tag)
+        cmprex.connectRx(srcRank, tag, size_factor=2)
     gaspi_printf("Connection established.")
 
 
@@ -84,7 +84,6 @@ with gpi.Gaspi_Context() as gaspi_context:
     # main transmission loop
     # +1 runs for flushing rests
     for run in range(num_runs+1):
-        gaspi_context.barrier()
 
         # Source side
         # ------------------------------------------------------------
@@ -92,30 +91,29 @@ with gpi.Gaspi_Context() as gaspi_context:
             gaspi_printf("Run #%d"%run)
             gaspi_printf("=========================================")
 
-            # rests = cmprex.getRests()
+            rests = cmprex.getRests()
             # send data to Receiver side. In last iteration send remaining rests.
             if(run<num_runs):
                 # write test data
-                #print_vector("Source Vector", values)
-                #print_vector("Rests Vector", rests)
+                print_vector("Source Vector", values)
+                print_vector("Rests Vector", rests)
 
-                cmprex.writeRemote(values, destRank, tag)
+                cmprex.writeRemote(values)
             else:
-                pass
                 # at the end, flush out the rests
-                #print_vector("Flush Rests Vector", rests)
-                #cmprex.flushRests(destRank, tag)
+                print_vector("Flush Rests Vector", rests)
+                cmprex.flushRests()
             # print Rests Vector after send, because it should be updated
-            #rests = cmprex.getRests()
-            #print_vector("Rests Vector after send", rests)
+            rests = cmprex.getRests()
+            print_vector("Rests Vector after send", rests)
 
         # Destination side
         # ------------------------------------------------------------
-        if(myRank == destRank and run<num_runs):
+        if(myRank == destRank):
             # get Data from sender
             #gaspi_printf("Dest Rank receiving")
-            rxVect = cmprex.readRemote(size, srcRank, tag)
-            #print_vector("Received Vector:", rxVect)
+            rxVect = cmprex.readRemote()
+            print_vector("Received Vector:", rxVect)
             for i in range(size):
                 accu[i] += rxVect[i]
 

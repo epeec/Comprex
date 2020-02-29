@@ -31,8 +31,8 @@ set (COMPREX_BUILD "${CMAKE_SOURCE_DIR}/build")
 
 # Enable Profiling with gprof
 if(PROFILE)
-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg")
-    set (CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -pg")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg -g")
+    set (CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -pg -g")
 endif()
 
 # add GPI2

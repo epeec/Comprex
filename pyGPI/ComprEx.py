@@ -30,18 +30,28 @@ libcomprex.Comprex_setCompressor.restype = ctypes.c_void_p
 # void resetRests(ComprEx<data_t>* self)
 libcomprex.Comprex_resetRests.argtypes = [ctypes.c_void_p]
 libcomprex.Comprex_resetRests.restype = ctypes.c_void_p
-# void flushRests(ComprEx<data_t>* self, int destRank, int tag)
-libcomprex.Comprex_flushRests.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_int]
+# void flushRests(ComprEx<data_t>* self)
+libcomprex.Comprex_flushRests.argtypes = [ctypes.c_void_p]
 libcomprex.Comprex_flushRests.restype = ctypes.c_void_p
 # data_t* getRests(ComprEx<data_t>* self)
 libcomprex.Comprex_getRests.argtypes = [ctypes.c_void_p, np_data_t_p, ctypes.c_int]
 libcomprex.Comprex_getRests.restype = ctypes.c_void_p
-# void writeRemote(ComprEx<data_t>* self, const data_t* vector, int size, int destRank, int tag)
-libcomprex.Comprex_writeRemote.argtypes = [ctypes.c_void_p, np_data_t_p, ctypes.c_int , ctypes.c_int, ctypes.c_int]
+# void writeRemote(ComprEx<data_t>* self, const data_t* vector, int size)
+libcomprex.Comprex_writeRemote.argtypes = [ctypes.c_void_p, np_data_t_p, ctypes.c_int]
 libcomprex.Comprex_writeRemote.restype = ctypes.c_void_p
-# void readRemote(ComprEx<data_t>* self, data_t* vector, int size, int srcRank, int tag)
-libcomprex.Comprex_readRemote.argtypes = [ctypes.c_void_p, np_data_t_p, ctypes.c_int, ctypes.c_int, ctypes.c_int]
+# void readRemote(ComprEx<data_t>* self, data_t* vector, int size)
+libcomprex.Comprex_readRemote.argtypes = [ctypes.c_void_p, np_data_t_p, ctypes.c_int]
 libcomprex.Comprex_readRemote.restype = ctypes.c_void_p
+# void Comprex_connectTo(ComprEx<data_t>* self, int srcRank, int targRank, int tag, int size_factor)
+libcomprex.Comprex_connectTo.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int]
+libcomprex.Comprex_connectTo.restype = ctypes.c_void_p
+# void Comprex_connectTx(ComprEx<data_t>* self, int targRank, int tag, int size_factor)
+libcomprex.Comprex_connectTx.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_int, ctypes.c_int]
+libcomprex.Comprex_connectTx.restype = ctypes.c_void_p
+# void Comprex_connectRx(ComprEx<data_t>* self, int srcRank, int tag, int size_factor)
+libcomprex.Comprex_connectRx.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_int, ctypes.c_int]
+libcomprex.Comprex_connectRx.restype = ctypes.c_void_p
+
 ###########################
 # Thresholds
 ###########################
@@ -92,7 +102,6 @@ class Comprex(object):
         self.obj = libcomprex.Comprex_new(runtime, context, segment, size)
 
     def __del__(self):
-        print("Comprex __del__ called")
         libcomprex.Comprex_del(self.obj)
 
     def setThreshold(self, threshold):
@@ -107,8 +116,8 @@ class Comprex(object):
     def resetRests(self):
         libcomprex.Comprex_resetRests(self.obj)
 
-    def flushRests(self, destRank, tag):
-        libcomprex.Comprex_flushRests(self.obj, destRank, tag)
+    def flushRests(self):
+        libcomprex.Comprex_flushRests(self.obj)
 
     def getRests(self):
         res = np.ndarray([self.size], dtype=np.float32)
@@ -118,21 +127,26 @@ class Comprex(object):
             raise RuntimeError("Error getting Rests!")
         return res
 
-    def writeRemote(self, vector, destRank, tag):
-        #vec = ctypes.POINTER(data_t*len(vector))(*vector)
-        #vec = (data_t*len(vector))(*vector)
-        #vec = ctypes.POINTER(data_t)(vector)
+    def writeRemote(self, vector):
         if vector.dtype is not np.float32:
             vec = np.array(vector, dtype=np.float32)
         else:
             vec = vector
-        libcomprex.Comprex_writeRemote(self.obj, vec, vec.size, destRank, tag)
+        libcomprex.Comprex_writeRemote(self.obj, vec, vec.size)
 
-    def readRemote(self, srcRank, tag):
+    def readRemote(self):
         res = np.ndarray([self.size], dtype=np.float32)
-        libcomprex.Comprex_readRemote(self.obj, res, res.size, srcRank, tag)
+        libcomprex.Comprex_readRemote(self.obj, res, res.size)
         return res
 
+    def connectTo(self, srcRank, targRank, tag, size_factor=1):
+        libcomprex.Comprex_connectTo(self.obj, srcRank, targRank, tag, size_factor)
+
+    def connectTx(self, Rank, tag, size_factor=1):
+        libcomprex.Comprex_connectTx(self.obj, Rank, tag, size_factor)
+
+    def connectRx(self, Rank, tag, size_factor=1):
+        libcomprex.Comprex_connectRx(self.obj, Rank, tag, size_factor)
 
 
 ###########################

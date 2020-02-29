@@ -84,39 +84,22 @@ with gpi.Gaspi_Context() as gaspi_context:
 
     # main transmission loop
     # +1 runs for flushing rests
-    for run in range(num_runs+1):
-        gaspi_context.barrier()
-
+    for run in range(num_runs):
         # Source side
         # ------------------------------------------------------------
         if(myRank == srcRank):
             gaspi_printf("Run #%d"%run)
             gaspi_printf("=========================================")
-
-            # rests = cmprex.getRests()
-            # send data to Receiver side. In last iteration send remaining rests.
-            if(run<num_runs):
-                # write test data
-                #print_vector("Source Vector", values)
-                #print_vector("Rests Vector", rests)
-
-                cmprex.writeRemote(values, destRank, tag)
-            else:
-                pass
-                # at the end, flush out the rests
-                #print_vector("Flush Rests Vector", rests)
-                #cmprex.flushRests(destRank, tag)
-            # print Rests Vector after send, because it should be updated
-            #rests = cmprex.getRests()
-            #print_vector("Rests Vector after send", rests)
+            # send data to Receiver side.
+            print_vector("Source Vector", values)
+            cmprex.writeRemote(values, destRank, tag)
 
         # Destination side
         # ------------------------------------------------------------
-        if(myRank == destRank and run<num_runs):
+        if(myRank == destRank):
             # get Data from sender
-            #gaspi_printf("Dest Rank receiving")
             rxVect = cmprex.readRemote(size, srcRank, tag)
-            #print_vector("Received Vector:", rxVect)
+            print_vector("Received Vector:", rxVect)
             for i in range(size):
                 accu[i] += rxVect[i]
 

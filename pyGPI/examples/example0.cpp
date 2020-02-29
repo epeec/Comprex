@@ -36,8 +36,8 @@ void print_vector(std::string name, const std::vector<data_t>& vect){
 
 int main(){
     
-    const int size = 10000;
-    const int num_runs=100000;
+    const int size = 500000;
+    const int num_runs=10000;
 
     // generate test data
     std::vector<data_t> values(size);
@@ -63,7 +63,7 @@ int main(){
     //gaspi::Runtime runtime;
     //gaspi::Context context;
     gaspi::Context* context = new gaspi::Context();
-    gaspi::segment::Segment* segment = new gaspi::segment::Segment( static_cast<size_t>(1) << 28);
+    gaspi::segment::Segment* segment = new gaspi::segment::Segment( static_cast<size_t>(1) << 30);
     //gaspi::segment::Segment segment( static_cast<size_t>(1) << 28);
     gaspi::group::Rank myRank =  context->rank();
     //int myRank_int = static_cast<int> ( context.rank().get() );

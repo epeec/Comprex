@@ -59,7 +59,7 @@ int main(){
     // ThresholdTopK test
     {
         int errors = 0;
-        ThresholdTopK<data_t> threshold(0.42);
+        ThresholdTopK<data_t> threshold(0.10);
         std::cout<<"Test ThresholdTopK class."<<std::endl;
 
         std::vector<bool> out_vec_bool;

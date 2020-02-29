@@ -91,8 +91,6 @@ class GaspiEx(object):
         return res
 
     def readRemote_vec(self, vector, size, srcRank, tag):
-        #vec = (data_t*size)()
-        #vec = ctypes.POINTER(data_t*self.size)()
         try:
             #libgaspiex.GaspiEx_readRemote(self.obj, vec, size, srcRank, tag)
             libcd.GaspiEx_readRemote(self.obj, vector, size, srcRank, tag)

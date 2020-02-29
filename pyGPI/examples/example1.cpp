@@ -36,8 +36,8 @@ void print_vector(std::string name, const std::vector<data_t>& vect){
 
 int main(){
     
-    const int size = 10000;
-    const int num_runs=1000;
+    const int size = 500000;
+    const int num_runs=10000;
 
     // generate test data
     std::vector<data_t> values(size);
@@ -75,7 +75,7 @@ int main(){
     cmprex.setCompressor(CompressorRLE<data_t>());
 
     // define connectivity pattern
-    cmprex.connectTo( gaspi::group::Rank((myRank.get()+1)%2), gaspi::group::Rank((myRank.get()+1)%2), tag);
+    cmprex.connectTo( gaspi::group::Rank((myRank.get()+1)%2), gaspi::group::Rank((myRank.get()+1)%2), tag, 2);
     // if(myRank == srcRank){
     //     cmprex.connectTx(destRank, size, tag);
     // } else {

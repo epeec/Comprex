@@ -103,14 +103,14 @@ def main():
         callbacks=callbacks_list)
 
     # Evaluate the model
-    if myRank==0:
+    if myRank!=-1:
         (loss, accuracy) = lenet.evaluate(
             test_data,
             test_labels,
             batch_size = 128,
             verbose = 1)
         # Print the model's accuracy
-        print("Test accuracy: %.2f"%(accuracy))
+        gaspi_printf("Test accuracy: %.2f"%(accuracy))
 
 if __name__ == "__main__":
     main()

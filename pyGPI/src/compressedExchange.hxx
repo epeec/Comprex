@@ -74,36 +74,6 @@ protected:
         // must be known for residual vector
         int size;
 
-        // internal buffer size (NOT the size of the communicated data!)
-
-        // virtual void communicateDataBufferSize_senderSide( int sizeBytes, gaspi::group::Rank destRank, int tag){
-        //     //gaspi_printf("srcBuff\n");
-        //     //if(!gaspi::isRuntimeAvailable()) gaspi_printf("Runtime not available!\n");
-
-        //     //gaspi::segment::Segment gpiCxx_segment(1000);
-        //     gaspi::singlesided::write::SourceBuffer srcBuff( _gpiCxx_segment, sizeof(int)) ;
-
-        //     //gaspi_printf("connectTarget\n");
-        //     srcBuff.connectToRemoteTarget(_gpiCxx_context, destRank, tag).waitForCompletion();
-
-        //     int* buffEntry = (reinterpret_cast<int*>(srcBuff.address()));
-        //     *buffEntry =  sizeBytes;
-
-        //     //gaspi_printf("initTransfer\n");
-        //     srcBuff.initTransfer(_gpiCxx_context);
-        // }
-
-        // virtual int communicateDataBufferSize_recverSide( gaspi::group::Rank srcRank, int tag){
-        //     gaspi::singlesided::write::TargetBuffer targBuff( _gpiCxx_segment, sizeof(int)) ;
-
-        //     targBuff.connectToRemoteSource(_gpiCxx_context, srcRank, tag).waitForCompletion();
-
-        //     targBuff.waitForCompletion();
-
-        //     int* buffEntry = (reinterpret_cast<int *>(targBuff.address()));
-        //     return *buffEntry;
-        // }
-
         virtual void sendCompressedVectorToDestRank( const CompressedVector<VarTYPE>* cVect ) {
             if(!srcBuff_data){
                 throw std::runtime_error("Send issued without connecting to Remote!");
@@ -222,6 +192,7 @@ public:
     }
     virtual void flushRests(){
         // send restsVect without applying thresholding
+        // TODO: don't compress Rests vector when flushing it!
         compressor->compress(&cVect, &restsVect);
         sendCompressedVectorToDestRank(cVect.get());
         resetRests();

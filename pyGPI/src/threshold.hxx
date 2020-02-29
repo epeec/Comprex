@@ -125,11 +125,16 @@ protected:
         std::vector<VarTYPE> vec_copy(*vec);
         int topk_pos = std::ceil(vec_copy.size() * _topK)-1;
         // sort vector in descending order
-        std::sort(vec_copy.begin(), vec_copy.end(), [](VarTYPE x1,VarTYPE x2){return std::abs(x1) > std::abs(x2);} );
-        _threshold = (topk_pos<0) ? std::abs((vec_copy)[0])+1 : std::abs((vec_copy)[topk_pos]);
-
-        // std::make_heap(vec_copy->begin(), vec_copy->end()); 
-        // for(int i=0; i<)
+        
+        if(topk_pos<0){
+            VarTYPE maximum = *std::max_element( vec_copy.begin(), vec_copy.end(), [](VarTYPE x1, VarTYPE x2){return std::abs(x1) < std::abs(x2);} );
+            _threshold = std::abs(maximum)+1;
+        }
+        else {
+            // std::sort(vec_copy.begin(), vec_copy.end(), [](VarTYPE x1,VarTYPE x2){return std::abs(x1) > std::abs(x2);} );
+            std::nth_element (vec_copy.begin(), vec_copy.begin()+topk_pos, vec_copy.end(), [](VarTYPE x1,VarTYPE x2){return std::abs(x1) > std::abs(x2);});
+            _threshold = std::abs((vec_copy)[topk_pos]);
+        } 
     }
   };
 

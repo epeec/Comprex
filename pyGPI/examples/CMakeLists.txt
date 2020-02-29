@@ -40,7 +40,7 @@ add_custom_target(gaspi_example0_py
 			   gaspi_run -m ${CMAKE_BINARY_DIR}/nodelist ${COMPREX_BUILD}/gaspi_example0_py.sh)
 
 add_custom_target(gaspi_example1_py
-			   gaspi_run -m ${CMAKE_BINARY_DIR}/nodelist ${COMPREX_BUILD}/gaspi_example0_py.sh)
+			   gaspi_run -m ${CMAKE_BINARY_DIR}/nodelist ${COMPREX_BUILD}/gaspi_example1_py.sh)
 			   
 add_custom_target(gaspi_allreduce_py
 			   gaspi_run -m ${CMAKE_BINARY_DIR}/nodelist ${COMPREX_BUILD}/gaspi_allreduce_py.sh)

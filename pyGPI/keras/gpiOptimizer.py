@@ -13,7 +13,7 @@ import pyGPI.Gpi as Gpi
 ## comprexAllreduce
 ## simple gather-broadcast based reduction with comprex as communicator
 ################################################################################################
-def comprexAllreduce(data, comprex, comm, tag=0, chief_rank=0):
+def comprexAllreduce(data, comprex_map, comm_map, chief_rank):
     data_size = data.size
     data_shape = data.shape
     data = data.flatten()
@@ -24,77 +24,51 @@ def comprexAllreduce(data, comprex, comm, tag=0, chief_rank=0):
 
     # Allocate the output buffer.
     # Copy your data to the output buffer to avoid modifying the input buffer.
-    output = np.array(data)
+    output = data
 
     # Chief Rank
     # reduces information, then sends it back
     #gaspi_printf("Entering Gather")
     if myRank == chief_rank:
         # Allocate a temporary buffer to store incoming data.
-        buffer = np.ndarray([data_size])
+        # buffer = np.ndarray([data_size])
         # reduce
         for rank in range(numRanks):
             if rank == chief_rank:
                 continue
             #gaspi_printf("Read Remote size:%d, rank:%d, tag:%d"%(data_size, rank, tag))
-            buffer = comprex.readRemote(rank, tag)
+            buffer = comprex_map[rank].readRemote()
             #gaspi_printf("Read data:%s"%(str(buffer)))
             if(buffer.size != output.size):
                 raise RuntimeError("Received Vector does not match size of accumulation vector (%d vs. %d)!"%(buffer.size, output.size))
             output += buffer
     else:
         # send own
-        comprex.writeRemote(data, chief_rank, tag)
+        comprex_map[chief_rank].writeRemote(data)
 
     #gaspi_printf("Gather finished")
-    pyGPI.gaspi_context.barrier()
+    #pyGPI.gaspi_context.barrier()
 
     if myRank == chief_rank:
-        buffer = np.ndarray([data_size])
+        #buffer = np.ndarray([data_size])
         # broadcast
         for rank in range(numRanks):
             if rank == chief_rank:
                 continue
-            comm.writeRemote(output, rank, tag)
+            #comm_map[rank].writeRemote(output, 0, 0)
+            comm_map[rank].writeRemote(output)
     # Worker Rank
     else:
         # receive new
-        output = np.array(comm.readRemote(data_size, chief_rank, tag))
+        #output = comm_map[chief_rank].readRemote(data_size, 0, 0)
+        output = comm_map[chief_rank].readRemote()
 
     # wait until update is received
-    pyGPI.gaspi_context.barrier()
+    #pyGPI.gaspi_context.barrier()
+    #gaspi_printf("Broadcast finished")
 
-    '''
-    # Chief Rank
-    # reduces information, then sends it back
-    if myRank == chief_rank:
-        # Allocate a temporary buffer to store incoming data.
-        buffer = np.ndarray([data_size])
-        # reduce
-        for rank in range(numRanks):
-            if rank == chief_rank:
-                continue
-            buffer = np.array(comprex.readRemote(rank, tag))
-            if(buffer.size != output.size):
-                raise RuntimeError("Received Vector does not match size of accumulation vector (%d vs. %d)!"%(buffer.size, output.size))
-            output += buffer
-
-        # broadcast
-        for rank in range(numRanks):
-            if rank == chief_rank:
-                continue
-            comm.writeRemote(output, rank, tag)
-    # Worker Rank
-    else:
-        # send own
-        comprex.writeRemote(data, chief_rank, tag)
-        # receive new
-        output = np.array(comm.readRemote(data_size, chief_rank, tag))
-
-    # wait until update is received
-    #gaspi_context.barrier()
-    '''
-    return np.reshape(output,data_shape)
+    output = np.reshape(output, data_shape)
+    return output
 
 
 ################################################################################################
@@ -102,7 +76,7 @@ def comprexAllreduce(data, comprex, comm, tag=0, chief_rank=0):
 ## ring reduction with compression-less communicator
 ################################################################################################
 # adapted from https://github.com/baidu-research/baidu-allreduce/blob/master/collectives.cu
-@profile
+#@profile
 def ringAllreduce(data, comm, feedback_comm, tag=0):
     #check if data_length and comprex size are equal
     data_shape = data.shape
@@ -256,26 +230,6 @@ def gpi_ringAllreduce(data, tag=0):
     feedbackTag = int(tag*2)
     commTag = int(tag*2+1)
 
-    #myGaspi_context = Gpi.Gaspi_Context()
-
-    # feedback_comm = GaspiEx.GaspiEx(pyGPI.gaspi_runtime.get(), myGaspi_context.get(), pyGPI.gaspi_segment.get())
-    # comm = GaspiEx.GaspiEx(pyGPI.gaspi_runtime.get(), myGaspi_context.get(), pyGPI.gaspi_segment.get())
-    # if myRank%2==0:
-    #     feedback_comm.connectTx(recv_from, 1, feedbackTag)
-    #     comm.connectTx(send_to, size, commTag)
-    # else:
-    #     feedback_comm.connectRx(send_to, 1, feedbackTag)
-    #     comm.connectRx(recv_from, size, commTag)
-    
-    # if myRank%2==1:
-    #     feedback_comm.connectTx(recv_from, 1, feedbackTag)
-    #     comm.connectTx(send_to, size, commTag)
-    # else:
-    #     feedback_comm.connectRx(send_to, 1, feedbackTag)
-    #     comm.connectRx(recv_from, size, commTag)
-    # gaspi_printf("Connected layer %d"%tag)
-
-
     # reverse recv and send rank for feedback lines
     feedback_comm = GaspiEx.GaspiEx(pyGPI.gaspi_runtime.get(), pyGPI.gaspi_context.get(), pyGPI.gaspi_segment.get())
     feedback_comm.connectTo(send_to, recv_from, 1, feedbackTag)
@@ -283,6 +237,10 @@ def gpi_ringAllreduce(data, tag=0):
     # data communication line
     comm = GaspiEx.GaspiEx(pyGPI.gaspi_runtime.get(), pyGPI.gaspi_context.get(), pyGPI.gaspi_segment.get())
     comm.connectTo(recv_from, send_to, size, commTag)
+
+    # Comprex
+    # comm = ComprEx.Comprex(pyGPI.gaspi_runtime.get(), pyGPI.gaspi_context.get(), pyGPI.gaspi_segment.get(), size)
+    # comm.connectTo(recv_from, send_to, commTag, size_factor=2)
     
     def func(data):
         return ringAllreduce(data, comm, feedback_comm, tag)
@@ -290,16 +248,68 @@ def gpi_ringAllreduce(data, tag=0):
 
 
 def gpi_comprexAllreduce(data, tag=0, chief_rank=0):
-    grad_size= np.prod(data.shape)
-    comprex=ComprEx.Comprex(pyGPI.gaspi_runtime.get(), pyGPI.gaspi_context.get(), pyGPI.gaspi_segment.get(), grad_size)
-    threshold = ComprEx.ThresholdTopK(0.01)
-    compressor = ComprEx.CompressorRLE()
-    comprex.setThreshold(threshold.get())
-    comprex.setCompressor(compressor.get())
-    comm = GaspiEx.GaspiEx(pyGPI.gaspi_runtime.get(), pyGPI.gaspi_context.get(), pyGPI.gaspi_segment.get())
+    size= data.shape.num_elements()
+    myRank = pyGPI.gaspi_context.getRank()
+    numRanks = pyGPI.gaspi_context.getSize()
+    compression_ratio = 0.00000001
+
+    comprexTag = int(tag*2*numRanks)
+    commTag = int(tag*2*numRanks+1)  
+
+    comm_map = {}
+    comprex_map = {}
+
+    # connection for comprex is all to one
+    if myRank==chief_rank:
+        for i in range(numRanks):
+            if i==chief_rank:
+                continue
+            comprex=ComprEx.Comprex(pyGPI.gaspi_runtime.get(), pyGPI.gaspi_context.get(), pyGPI.gaspi_segment.get(), size)
+            threshold = ComprEx.ThresholdTopK(compression_ratio) # does not matter
+            compressor = ComprEx.CompressorRLE()
+            comprex.setThreshold(threshold.get())
+            comprex.setCompressor(compressor.get())
+            comprex.connectRx(i, comprexTag+i, size_factor=2)
+            comprex_map[i] = comprex
+            gaspi_printf("Connecting Rx Comprex with rank %d\n"%(i))
+    else:
+        comprex=ComprEx.Comprex(pyGPI.gaspi_runtime.get(), pyGPI.gaspi_context.get(), pyGPI.gaspi_segment.get(), size)
+        threshold = ComprEx.ThresholdTopK(compression_ratio)
+        compressor = ComprEx.CompressorRLE()
+        comprex.setThreshold(threshold.get())
+        comprex.setCompressor(compressor.get())
+        comprex.connectTx(chief_rank, comprexTag+myRank, size_factor=2)
+        comprex_map[chief_rank] = comprex
+        gaspi_printf("Connecting Tx Comprex with rank %d\n"%(chief_rank))
+        
+    # connection for comm is one to all
+    if myRank==chief_rank:
+        for i in range(numRanks):
+            if i==chief_rank:
+                continue
+            #comm = GaspiEx.GaspiEx(pyGPI.gaspi_runtime.get(), pyGPI.gaspi_context.get(), pyGPI.gaspi_segment.get())
+            #comm.connectTx(i, size, commTag+i)
+            comm=ComprEx.Comprex(pyGPI.gaspi_runtime.get(), pyGPI.gaspi_context.get(), pyGPI.gaspi_segment.get(), size)
+            threshold = ComprEx.ThresholdTopK(compression_ratio)
+            compressor = ComprEx.CompressorRLE()
+            comm.setThreshold(threshold.get())
+            comm.setCompressor(compressor.get())
+            comm.connectTx(i, commTag+i, size_factor=2)
+            comm_map[i] = comm
+    else:
+        #comm = GaspiEx.GaspiEx(pyGPI.gaspi_runtime.get(), pyGPI.gaspi_context.get(), pyGPI.gaspi_segment.get())
+        #comm.connectRx(chief_rank, size, commTag+myRank)
+        comm=ComprEx.Comprex(pyGPI.gaspi_runtime.get(), pyGPI.gaspi_context.get(), pyGPI.gaspi_segment.get(), size)
+        threshold = ComprEx.ThresholdTopK(compression_ratio) # does not matter
+        compressor = ComprEx.CompressorRLE()
+        comm.setThreshold(threshold.get())
+        comm.setCompressor(compressor.get())
+        comm.connectRx(chief_rank, commTag+myRank, size_factor=2)
+        comm_map[chief_rank] = comm
+
     def func(data):
         #comprex.resetRests()
-        return comprexAllreduce(data, comprex, comm, tag=tag, chief_rank=chief_rank)
+        return comprexAllreduce(data, comprex_map, comm_map, chief_rank)
     return tf.py_func(func=func, inp=[data], Tout=data.dtype, name="gpi_comprexAllreduce")
 
 
@@ -335,10 +345,9 @@ def create_distributed_optimizer(optimizer, name=None):
                             grad_size = grad.shape.num_elements() or 0
                             #gaspi_printf("Gradient size of layer %d=%d"%(iter, grad_size))
                             gaspi_printf("Layer %d: %s"%(iter, str(grad)))
-                            #self.communicator.append( ComprEx.Comprex(pyGPI.gaspi_runtime.get(), pyGPI.gaspi_context.get(), pyGPI.gaspi_segment.get(), grad_size) )
                             if grad_size != 0:
-                                avg_grad = gpi_ringAllreduce(grad, tag=iter)#self.communicator[iter])
-                            #avg_grad = gpi_comprexAllreduce(grad, tag=iter, chief_rank=0)
+                                # avg_grad = gpi_ringAllreduce(grad, tag=iter)
+                                avg_grad = gpi_comprexAllreduce(grad, tag=iter, chief_rank=0)
                             else:
                                 avg_grad = grad
                             averaged_gradients.append(avg_grad)
