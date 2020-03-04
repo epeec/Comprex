@@ -63,12 +63,14 @@ class Getable(object):
 class GaspiEx(object):
     def __init__(self, runtime, context, segment):
         #self.obj = libgaspiex.GaspiEx_new(runtime, context, segment)
-        self.obj = libcd.GaspiEx_new(runtime, context, segment)
+        self.gaspi_segment = segment # keep this here for garbage collection order
+        self.obj = libcd.GaspiEx_new(runtime.get(), context.get(), segment.get())
 
     def __del__(self):
-        #libgaspiex.GaspiEx_del(self.obj)
-        libcd.GaspiEx_del(self.obj)
-        self.obj = None
+        if self.obj is not None:
+            #libgaspiex.GaspiEx_del(self.obj)
+            libcd.GaspiEx_del(self.obj)
+            self.obj = None
 
     def writeRemote(self, vector, destRank, tag):
         try:

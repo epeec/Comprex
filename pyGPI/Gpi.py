@@ -56,57 +56,88 @@ libgpi.Gaspi_Allreduce_floatsum.restype = ctypes.c_void_p
 libgpi.Gaspi_Allreduce_Elem_Max.argtypes = []
 libgpi.Gaspi_Allreduce_Elem_Max.restype = ctypes.c_uint
 
-class Getable(object):
+class Gettable(object):
     def get(self):
         return self.obj
+
+class Subscribable(object):
+    def __init__(self):
+        self.dependency_list=[]
+    def __del__(self):
+        for item in self.dependency_list:
+            # gaspi_printf("Deleting %s from class %s"%(item, self))
+            del item
+    def subscribe(self, obj):
+        self.dependency_list.append(obj)
+    
 
 ###########################
 # Gaspi_Runtime
 ###########################
-class Gaspi_Runtime(Getable):
+class Gaspi_Runtime(Gettable, Subscribable):
     def __init__(self):
         #gaspi_printf("__init__ called on %s"%self)
-        if not Gaspi_Runtime.exists:
-            self.obj = libgpi.Gaspi_Runtime_new()
-        Gaspi_Runtime.exists=True
+        if Gaspi_Runtime.instance is not None:
+            raise RuntimeError("Gaspi_Runtime already exists.")
+        super().__init__()
+        self.obj = libgpi.Gaspi_Runtime_new()
+        Gaspi_Runtime.instance = self
 
     def __enter__(self):
         return self
 
     def __del__(self):
-        #gaspi_printf("__del__ called on %s"%self)
-        if Gaspi_Runtime.exists:
+        if self.exists():
+            super().__del__()
+            # gaspi_printf("Gaspi_Runtime.__del__ called on %s"%self)
             libgpi.Gaspi_Runtime_del(self.obj)
-            Gaspi_Runtime.exists=False
-            self.obj=None
+            self.obj = None
 
     def __exit__(self, exception_type, exception_value, traceback):
-        if Gaspi_Runtime.exists:
+        if self.exists():
+            # gaspi_printf("Gaspi_Runtime.__exit__ called on %s"%self)
+            super().__del__()
+            # del self
             libgpi.Gaspi_Runtime_del(self.obj)
-            Gaspi_Runtime.exists=False
             self.obj=None
-Gaspi_Runtime.exists=False
+
+    @classmethod
+    def create(cls):
+        if cls.exists():
+            return cls.instance
+        else:
+            return cls()
+
+    @classmethod
+    def exists(cls):
+        return cls.instance is not None
+Gaspi_Runtime.instance=None
 
 ###########################
 # Gaspi_Context
 ###########################
-# TODO: Verify if destructor of Runtime destroys gaspi context
-class Gaspi_Context(Getable):
+class Gaspi_Context(Gettable, Subscribable):
     def __init__(self):
+        super().__init__()
         #gaspi_printf("__init__ called on %s"%self)
         self.obj = libgpi.Gaspi_Context_new()
+        #Gaspi_Runtime.create().subscribe(self)
     def __enter__(self):
         #gaspi_printf("__enter__ called")
         return self
     def __del__(self):
-        #gaspi_printf("__del__ called on %s"%self)
-        libgpi.Gaspi_Context_del(self.obj)
-        self.obj=None
+        if self.obj is not None:
+            super().__del__()
+            # gaspi_printf("Gaspi_Context.__del__ called on %s"%self)
+            libgpi.Gaspi_Context_del(self.obj)
+            self.obj=None
 
     def __exit__(self, exception_type, exception_value, traceback):
         #gaspi_printf("__exit__ called")
-        libgpi.Gaspi_Context_del(self.obj)
-        self.obj=None
+        # gaspi_printf("Gaspi_Context.__exit__ called on %s"%self)
+        del self
+        # libgpi.Gaspi_Context_del(self.obj)
+        # self.obj=None
 
     def getRank(self):
         return libgpi.Gaspi_Context_getRank(self.obj)
@@ -132,16 +163,20 @@ class Gaspi_Context(Getable):
 # Gaspi_Segment
 ###########################
 # TODO: Verify if destructor of Runtime destroys gaspi segment
-class Gaspi_Segment(Getable):
+class Gaspi_Segment(Gettable, Subscribable):
     def __init__(self, size):
+        super().__init__()
         self.obj = libgpi.Gaspi_Segment_new(size)
 
     def __enter__(self):
         return self
 
     def __del__(self):
-        libgpi.Gaspi_Segment_del(self.obj)
-        self.obj=None
+        # gaspi_printf("Gaspi_Segment.__del__ called on %s"%self)
+        if self.obj is not None:
+            super().__del__()
+            libgpi.Gaspi_Segment_del(self.obj)
+            self.obj=None
 
     def __exit__(self, exception_type, exception_value, traceback):
         libgpi.Gaspi_Segment_del(self.obj)

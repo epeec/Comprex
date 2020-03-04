@@ -59,7 +59,7 @@ with gpi.Gaspi_Context() as gaspi_context:
     # cmprex.setCompressor(compressor.get())
     # gaspi_printf("Building comprex")
 
-    cmprex = GaspiEx(gaspi_runtime.get(), gaspi_context.get(), gaspi_segment.get())
+    cmprex = GaspiEx(gaspi_runtime, gaspi_context, gaspi_segment)
 
     # set connection pattern
     if myRank==srcRank:
@@ -123,7 +123,8 @@ with gpi.Gaspi_Context() as gaspi_context:
 
     del cmprex
     del gaspi_segment
-    
+
+del gaspi_runtime    
 print("Done.")
 
 

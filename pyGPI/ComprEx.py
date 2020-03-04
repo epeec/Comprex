@@ -2,7 +2,7 @@ import ctypes
 import os
 import numpy as np
 import numpy.ctypeslib as npct
-
+#from Gpi import gaspi_printf
 script_dir = os.path.dirname(__file__)
 lib_dir = os.path.join(script_dir,'./build/src/libPyGPI.so')
 #libcomprex = ctypes.cdll.LoadLibrary(lib_dir)
@@ -99,16 +99,20 @@ class Getable(object):
 class Comprex(object):
     def __init__(self, runtime, context, segment, size):
         self.size = size
-        self.obj = libcomprex.Comprex_new(runtime, context, segment, size)
+        self.gaspi_segment = segment # keep this for garbage collection order
+        self.obj = libcomprex.Comprex_new(runtime.get(), context.get(), segment.get(), size)
 
     def __del__(self):
-        libcomprex.Comprex_del(self.obj)
+        # gaspi_printf("Comprex.__del__ called on %s"%self)
+        if self.obj is not None:
+            libcomprex.Comprex_del(self.obj)
+            self.obj=None
 
     def setThreshold(self, threshold):
-        libcomprex.Comprex_setThreshold(self.obj, threshold)
+        libcomprex.Comprex_setThreshold(self.obj, threshold.get())
 
     def setCompressor(self, compressor):
-        libcomprex.Comprex_setCompressor(self.obj, compressor)
+        libcomprex.Comprex_setCompressor(self.obj, compressor.get())
 
     def getSize(self):
         return self.size

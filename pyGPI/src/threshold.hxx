@@ -126,7 +126,7 @@ protected:
         int topk_pos = std::ceil(vec_copy.size() * _topK)-1;
         // sort vector in descending order
         
-        if(topk_pos<0){
+        if(topk_pos<=0){
             VarTYPE maximum = *std::max_element( vec_copy.begin(), vec_copy.end(), [](VarTYPE x1, VarTYPE x2){return std::abs(x1) < std::abs(x2);} );
             _threshold = std::abs(maximum)+1;
         }

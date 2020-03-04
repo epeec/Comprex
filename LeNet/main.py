@@ -78,10 +78,12 @@ def main():
     test_labels = np.eye(10)[test_labels]
 
     lenet = model.LeNet()
+    # lenet.summary()
 
     # Compile the network
     optimizer = tf.keras.optimizers.SGD(lr=0.01*numRanks)
     optimizer = gpiOptimizer.create_distributed_optimizer(optimizer)
+    gaspi_printf("Distributed Optimizer created and returned.")
     lenet.compile(
         loss = "categorical_crossentropy",
         optimizer = optimizer,
@@ -114,3 +116,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+    del pyGPI.gaspi_segment
+    del pyGPI.gaspi_runtime

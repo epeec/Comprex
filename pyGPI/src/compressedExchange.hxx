@@ -85,6 +85,9 @@ protected:
             // cVect->writeBuffer(srcBuff_data->address()+sizeof(int));
 
             cVect->writeBuffer( srcBuff_data->address() );
+
+            // gaspi_printgaspi_printf("ComprEx sent %d Bytes of %d Bytes.\n",sizeBytes, size*sizeof(VarTYPE));
+
             srcBuff_data->initTransferPart(_gpiCxx_context, sizeBytes, 0);
 
             //gaspi_printf("transfer\n");

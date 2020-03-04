@@ -13,7 +13,7 @@ class BroadcastInitWeights(tf.keras.callbacks.Callback):
 
     def on_train_begin(self, logs={}):
         self.model_size = self.model.count_params()
-        self.comm = GaspiEx(pyGPI.gaspi_runtime.get(), pyGPI.gaspi_context.get(), pyGPI.gaspi_segment.get())
+        self.comm = GaspiEx(pyGPI.gaspi_runtime, pyGPI.gaspi_context, pyGPI.gaspi_segment)
         self.comm_tag = 0
         self.myRank = pyGPI.gaspi_context.getRank()
 

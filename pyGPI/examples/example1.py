@@ -30,10 +30,11 @@ destRank = 1
 tag = 1
 
 # initialize GASPI
-gaspi_runtime = gpi.Gaspi_Runtime()
+gaspi_runtime = gpi.Gaspi_Runtime.create()
 
+
+# gaspi_context = gpi.Gaspi_Context()
 with gpi.Gaspi_Context() as gaspi_context:
-
     print("Transmit values from rank 0 to rank 1. Rank 1 accumulates values.")
     print("Use Gaspi Logger to intermediate outputs. Start it with \'gaspi_logger&\' in your console.")
 
@@ -41,12 +42,10 @@ with gpi.Gaspi_Context() as gaspi_context:
     myRank = gaspi_context.getRank()
     print( "Rank %d of %d"%(myRank, gaspi_context.getSize()) )
 
-    #gaspi_context = gpi.Gaspi_Context()
     # getting memory for GASPI
     gaspi_segment = gpi.Gaspi_Segment(2**30) # 1 GB
-
     # create threshold
-    threshold = comprex.ThresholdTopK(0.01)
+    threshold = comprex.ThresholdTopK(0.001)
     gaspi_printf("Using ThresholdTopK")
 
     # create compressor
@@ -54,9 +53,9 @@ with gpi.Gaspi_Context() as gaspi_context:
     gaspi_printf("Using CompressorRLE")
 
     # create Comprex
-    cmprex = comprex.Comprex(gaspi_runtime.get(), gaspi_context.get(), gaspi_segment.get(), size)
-    cmprex.setThreshold(threshold.get())
-    cmprex.setCompressor(compressor.get())
+    cmprex = comprex.Comprex(gaspi_runtime, gaspi_context, gaspi_segment, size)
+    cmprex.setThreshold(threshold)
+    cmprex.setCompressor(compressor)
     gaspi_printf("Building comprex")
 
 
@@ -135,9 +134,9 @@ with gpi.Gaspi_Context() as gaspi_context:
             print("expected:")
             print(gold_result)
 
-    del cmprex
     del gaspi_segment
-    
+
+del gaspi_runtime
 print("Done.")
 
 

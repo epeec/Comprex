@@ -231,16 +231,12 @@ def gpi_ringAllreduce(data, tag=0):
     commTag = int(tag*2+1)
 
     # reverse recv and send rank for feedback lines
-    feedback_comm = GaspiEx.GaspiEx(pyGPI.gaspi_runtime.get(), pyGPI.gaspi_context.get(), pyGPI.gaspi_segment.get())
+    feedback_comm = GaspiEx.GaspiEx(pyGPI.gaspi_runtime, pyGPI.gaspi_context, pyGPI.gaspi_segment)
     feedback_comm.connectTo(send_to, recv_from, 1, feedbackTag)
 
     # data communication line
-    comm = GaspiEx.GaspiEx(pyGPI.gaspi_runtime.get(), pyGPI.gaspi_context.get(), pyGPI.gaspi_segment.get())
+    comm = GaspiEx.GaspiEx(pyGPI.gaspi_runtime, pyGPI.gaspi_context, pyGPI.gaspi_segment)
     comm.connectTo(recv_from, send_to, size, commTag)
-
-    # Comprex
-    # comm = ComprEx.Comprex(pyGPI.gaspi_runtime.get(), pyGPI.gaspi_context.get(), pyGPI.gaspi_segment.get(), size)
-    # comm.connectTo(recv_from, send_to, commTag, size_factor=2)
     
     def func(data):
         return ringAllreduce(data, comm, feedback_comm, tag)
@@ -251,7 +247,7 @@ def gpi_comprexAllreduce(data, tag=0, chief_rank=0):
     size= data.shape.num_elements()
     myRank = pyGPI.gaspi_context.getRank()
     numRanks = pyGPI.gaspi_context.getSize()
-    compression_ratio = 0.00000001
+    compression_ratio = 1e-2
 
     comprexTag = int(tag*2*numRanks)
     commTag = int(tag*2*numRanks+1)  
@@ -264,46 +260,43 @@ def gpi_comprexAllreduce(data, tag=0, chief_rank=0):
         for i in range(numRanks):
             if i==chief_rank:
                 continue
-            comprex=ComprEx.Comprex(pyGPI.gaspi_runtime.get(), pyGPI.gaspi_context.get(), pyGPI.gaspi_segment.get(), size)
+            gaspi_printf("Connecting Rx Comprex with rank %d\n"%(i))
+            comprex=ComprEx.Comprex(pyGPI.gaspi_runtime, pyGPI.gaspi_context, pyGPI.gaspi_segment, size)
             threshold = ComprEx.ThresholdTopK(compression_ratio) # does not matter
             compressor = ComprEx.CompressorRLE()
-            comprex.setThreshold(threshold.get())
-            comprex.setCompressor(compressor.get())
+            comprex.setThreshold(threshold)
+            comprex.setCompressor(compressor)
             comprex.connectRx(i, comprexTag+i, size_factor=2)
             comprex_map[i] = comprex
-            gaspi_printf("Connecting Rx Comprex with rank %d\n"%(i))
     else:
-        comprex=ComprEx.Comprex(pyGPI.gaspi_runtime.get(), pyGPI.gaspi_context.get(), pyGPI.gaspi_segment.get(), size)
+        gaspi_printf("Connecting Tx Comprex with rank %d\n"%(chief_rank))
+        comprex=ComprEx.Comprex(pyGPI.gaspi_runtime, pyGPI.gaspi_context, pyGPI.gaspi_segment, size)
         threshold = ComprEx.ThresholdTopK(compression_ratio)
         compressor = ComprEx.CompressorRLE()
-        comprex.setThreshold(threshold.get())
-        comprex.setCompressor(compressor.get())
+        comprex.setThreshold(threshold)
+        comprex.setCompressor(compressor)
         comprex.connectTx(chief_rank, comprexTag+myRank, size_factor=2)
         comprex_map[chief_rank] = comprex
-        gaspi_printf("Connecting Tx Comprex with rank %d\n"%(chief_rank))
+        
         
     # connection for comm is one to all
     if myRank==chief_rank:
         for i in range(numRanks):
             if i==chief_rank:
                 continue
-            #comm = GaspiEx.GaspiEx(pyGPI.gaspi_runtime.get(), pyGPI.gaspi_context.get(), pyGPI.gaspi_segment.get())
-            #comm.connectTx(i, size, commTag+i)
-            comm=ComprEx.Comprex(pyGPI.gaspi_runtime.get(), pyGPI.gaspi_context.get(), pyGPI.gaspi_segment.get(), size)
+            comm=ComprEx.Comprex(pyGPI.gaspi_runtime, pyGPI.gaspi_context, pyGPI.gaspi_segment, size)
             threshold = ComprEx.ThresholdTopK(compression_ratio)
             compressor = ComprEx.CompressorRLE()
-            comm.setThreshold(threshold.get())
-            comm.setCompressor(compressor.get())
+            comm.setThreshold(threshold)
+            comm.setCompressor(compressor)
             comm.connectTx(i, commTag+i, size_factor=2)
             comm_map[i] = comm
     else:
-        #comm = GaspiEx.GaspiEx(pyGPI.gaspi_runtime.get(), pyGPI.gaspi_context.get(), pyGPI.gaspi_segment.get())
-        #comm.connectRx(chief_rank, size, commTag+myRank)
-        comm=ComprEx.Comprex(pyGPI.gaspi_runtime.get(), pyGPI.gaspi_context.get(), pyGPI.gaspi_segment.get(), size)
+        comm=ComprEx.Comprex(pyGPI.gaspi_runtime, pyGPI.gaspi_context, pyGPI.gaspi_segment, size)
         threshold = ComprEx.ThresholdTopK(compression_ratio) # does not matter
         compressor = ComprEx.CompressorRLE()
-        comm.setThreshold(threshold.get())
-        comm.setCompressor(compressor.get())
+        comm.setThreshold(threshold)
+        comm.setCompressor(compressor)
         comm.connectRx(chief_rank, commTag+myRank, size_factor=2)
         comm_map[chief_rank] = comm
 
@@ -317,14 +310,13 @@ def gpi_comprexAllreduce(data, tag=0, chief_rank=0):
 def create_distributed_optimizer(optimizer, name=None):
     class _DistributedOptimizer(keras.optimizers.Optimizer):
         def __init__(self, name, config):
+            gaspi_printf("Creating distributed optimizer...")
             if name is None:
                 name = "Distributed%s" % self.__class__.__base__.__name__
             self._name = name
-            #self.comm = GaspiEx.GaspiEx(pyGPI.gaspi_runtime.get(), pyGPI.gaspi_context.get(), pyGPI.gaspi_segment.get())
             self._get_gradients_used = False
             super(self.__class__, self).__init__(**config)
-            #self.communicator = []
-
+            gaspi_printf("created distributed optimizer")
 
         def get_gradients(self, loss, params):
             """
@@ -333,6 +325,7 @@ def create_distributed_optimizer(optimizer, name=None):
             In DistributedOptimizer, get_gradients() is overriden to also
             allreduce the gradients before returning them.
             """
+            gaspi_printf("Building Gradients")
             self._get_gradients_used = True
             gradients = super(self.__class__, self).get_gradients(loss, params)
             if pyGPI.gaspi_context.getSize() > 1:
@@ -369,6 +362,6 @@ def create_distributed_optimizer(optimizer, name=None):
     # The goal is to override get_gradients() method with an allreduce implementation.
     # This class will have the same name as the optimizer it's wrapping, so that the saved
     # model could be easily restored without Horovod.
-    cls = type(optimizer.__class__.__name__, (optimizer.__class__,),
-               dict(_DistributedOptimizer.__dict__))
-    return cls(name, optimizer.get_config())
+    cls = type(optimizer.__class__.__name__, (optimizer.__class__,),dict(_DistributedOptimizer.__dict__))
+    obj = cls(name, optimizer.get_config())
+    return obj
