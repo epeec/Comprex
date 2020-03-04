@@ -103,7 +103,6 @@ class Comprex(object):
         self.obj = libcomprex.Comprex_new(runtime.get(), context.get(), segment.get(), size)
 
     def __del__(self):
-        # gaspi_printf("Comprex.__del__ called on %s"%self)
         if self.obj is not None:
             libcomprex.Comprex_del(self.obj)
             self.obj=None

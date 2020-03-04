@@ -41,7 +41,6 @@ void Comprex_getRests(ComprEx<data_t>* self, data_t* vector, int size){
         }
 }
 void Comprex_writeRemote(ComprEx<data_t>* self, const data_t* vector, int size) {
-    //std::vector<data_t> vec(vector, vector+size);
     self->writeRemote( vector, size);
 }
 void Comprex_readRemote(ComprEx<data_t>* self, data_t* vector, int size) {

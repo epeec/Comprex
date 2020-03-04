@@ -1,5 +1,4 @@
 #include <compressedExchange.hxx>
-//#include <gaspiExchange.hxx>
 
 #include <iostream>
 #include <string>
@@ -35,9 +34,13 @@ void print_vector(std::string name, const std::vector<data_t>& vect){
 }
 
 int main(){
-    
-    const int size = 500000;
-    const int num_runs=10000;
+    /////////////////////////////////////
+    // Parameters
+    const int size = 500000; // size of vector
+    const int num_runs=10000; // number of communication rounds
+
+    const float topK = 0.01; // compression topK value
+    /////////////////////////////////////
 
     // generate test data
     std::vector<data_t> values(size);
@@ -46,10 +49,9 @@ int main(){
     }
 
     // generate gold results
-    // there are num_runs-1 effective runs!
     std::vector<data_t> gold_result(size);
     for(int i=0; i<gold_result.size(); ++i) {
-        gold_result[i] = (num_runs-1)*values[i];
+        gold_result[i] = (num_runs)*values[i];
     }
 
     // results vector
@@ -63,60 +65,44 @@ int main(){
     gaspi::Context* context = new gaspi::Context();
     gaspi::segment::Segment* segment = new gaspi::segment::Segment( static_cast<size_t>(1) << 28);
     gaspi::group::Rank myRank =  context->rank();
-    gaspi::group::Rank srcRank(0);
-    gaspi::group::Rank destRank(1);
-    int tag = 1;  // comm tag
+    gaspi::group::Rank srcRank(0); // Rank which sends the data
+    gaspi::group::Rank destRank(1); // Rank which receives the data
+    int tag = 1;  // communication tag
 
     // setup comprex
-    std::cout<<"Building ComprEx"<<std::endl;
     // ComprEx must know the size of the transmission in order to handle Rests
     ComprEx<int> cmprex(*runtime, *context, *segment, size);
-    cmprex.setThreshold(ThresholdTopK<data_t>(0.01));
+    cmprex.setThreshold(ThresholdTopK<data_t>(topK));
     cmprex.setCompressor(CompressorRLE<data_t>());
 
     // define connectivity pattern
     cmprex.connectTo( gaspi::group::Rank((myRank.get()+1)%2), gaspi::group::Rank((myRank.get()+1)%2), tag, 2);
-    // if(myRank == srcRank){
-    //     cmprex.connectTx(destRank, size, tag);
-    // } else {
-    //     cmprex.connectRx(srcRank, size, tag);
-    // }
 
     if(myRank == srcRank) {
         std::cout<<"Rank "<<srcRank.get()<<" sends data to Rank "<<destRank.get()<<"."<<std::endl;
     }
 
-    int progress_run=0;
-    for(int run = 0; run<num_runs; run++) { 
-        //context->barrier();
+    int progress_run=0; // for progress messages
 
+    ////////////////////////////////
+    // main communication loop
+    ////////////////////////////////
+    for(int run = 0; run<num_runs+1; run++) { // num_runs + 1 for flushing in the last step
         // Source side
         // ------------------------------------------------------------
         if(myRank == srcRank) {
-            // std::cout<<"Run #"<<run<<std::endl;
-            // std::cout<<"========================================="<<std::endl;
-
+            // display progress
             if((run-progress_run)%(num_runs/10)==0){
                 std::cout<<((float)run/num_runs)*100<<"\%..."<<std::endl;
                 progress_run = run;
             }
             
-            // std::vector<data_t> rests = cmprex.getRests();
-            // send data to Receiver side. In last iteration send remaining rests.
-            if(run<num_runs-1){
-                // write test data
-                // print_vector<data_t>("Source Vector", values);
-                // print_vector<data_t>("Rests Vector:", rests);
+            if(run<num_runs){
                 cmprex.writeRemote(&values);
             }
             else {
-                // at the end, flush out the rests
-                // print_vector<data_t>("Flush Rests Vector:", rests);
                 cmprex.flushRests();
             }
-            // print Rests Vector after send, because it should be updated
-            // rests = cmprex.getRests();
-            // print_vector<data_t>("Rests Vector after send:", rests);
         } 
 
         // Destination side
@@ -125,14 +111,15 @@ int main(){
             // get Data from sender
             std::vector<data_t> rxVect(size);
             cmprex.readRemote(&rxVect);
-            //print_vector<data_t>("Received Vector:", rxVect);
+            // add data to the results vector
             for(int i=0; i<rxVect.size(); ++i){
                 result[i] += rxVect[i]; 
             }
-        }// if(myRank == destRank)
+        }
         context->barrier();
     } //run
 
+    // check communicated values against gold result
     if(myRank == destRank) {
         int errors=0;
         for(int i=0; i<result.size(); ++i){
@@ -141,13 +128,7 @@ int main(){
                 ++errors;
             }
         }
-
         print_pass(errors);
     }
-
-    // delete runtime;
-    // delteted indirectly by runtime?
-    //delete context;
-    //delete segment;
     return 0;
 }

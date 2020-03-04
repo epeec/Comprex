@@ -1,4 +1,4 @@
-from pyGPI.GaspiEx import GaspiEx
+from pyGPI import ComprEx
 import pyGPI
 from pyGPI.Gpi import gaspi_printf
 
@@ -13,26 +13,27 @@ class BroadcastInitWeights(tf.keras.callbacks.Callback):
 
     def on_train_begin(self, logs={}):
         self.model_size = self.model.count_params()
-        self.comm = GaspiEx(pyGPI.gaspi_runtime, pyGPI.gaspi_context, pyGPI.gaspi_segment)
+        self.comm = ComprEx.Comprex(pyGPI.gaspi_runtime, pyGPI.gaspi_context, pyGPI.gaspi_segment, self.model_size)
+        threshold = ComprEx.ThresholdNone()
+        compressor = ComprEx.CompressorNone()
+        self.comm.setThreshold(threshold)
+        self.comm.setCompressor(compressor)
         self.comm_tag = 0
         self.myRank = pyGPI.gaspi_context.getRank()
 
         # chief node
         if(self.myRank==self.srcRank):
             blob = self.weights_to_blob()
-            #gaspi_printf(str(blob))
+            # chief: send weights to workers.
             for destRank in range(pyGPI.gaspi_context.getSize()):
                 if destRank != self.myRank:
-                    #gaspi_printf("Sending blob to %d"%(destRank))
-                    self.comm.connectTx(destRank, self.model_size, self.comm_tag)
-                    self.comm.writeRemote(blob, destRank, self.comm_tag)
-        # worker node
+                    self.comm.connectTx(destRank, self.comm_tag, size_factor=2)
+                    self.comm.writeRemote(blob)
         else:
-            #gaspi_printf("Receiving blob from %d"%(self.srcRank))
-            self.comm.connectRx(self.srcRank, self.model_size, self.comm_tag)
-            blob = self.comm.readRemote(self.model_size, self.srcRank, self.comm_tag)
+            # worker node
+            self.comm.connectRx(self.srcRank, self.comm_tag, size_factor=2)
+            blob = self.comm.readRemote()
             self.blob_to_weights(blob)
-            #print(self.model.get_weights())
 
     def weights_to_blob(self):
         model_size = self.model.count_params()

@@ -138,13 +138,6 @@ public:
         r_original_size = *(reinterpret_cast<int *>(pCrr));
         pCrr += sizeof(int);
         original_size=r_original_size;
-        /*
-        if(r_original_size != original_size) {
-            //printf("\n [%d] sendr-rank-orig-size:%d my-orig_size:%d \n",
-            //        ComprEx<VarTYPE>::_gpiCxx_context.rank().get(), 
-            //        *(reinterpret_cast<int *>(pCrr)), ComprEx<VarTYPE>::_origSize);
-            throw std::runtime_error ("sender-rank uncompressed vector size differs from the receiver one.");
-        }*/
         
         // shrinkedVectorSize , int
         r_compressed_size = *(reinterpret_cast<int *>(pCrr));

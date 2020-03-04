@@ -4,26 +4,28 @@ import Gpi
 from Gpi import gaspi_printf
 import time
 
-#print("Start")
-
 # to see messages from gaspi_printf, start Logger in your console with 'gaspi_logger&'
-gaspi_printf("Message from GASPI Logger, before runtime. Start 'gaspi_logger&'!")
+print("Start 'gaspi_logger&' in your console to see debugging output!")
 
-gaspi_runtime = pyGPI.Gaspi_Runtime()
-gaspi_context = pyGPI.Gaspi_Context()
-gaspi_segment = pyGPI.Gaspi_Segment(10)
+# set up Gaspi environment
+gaspi_runtime = Gpi.Gaspi_Runtime()
+gaspi_context = Gpi.Gaspi_Context()
+gaspi_segment = Gpi.Gaspi_Segment(10)
 
+# get local rank
 myRank = gaspi_context.rank()
 
-#with gpi.Gaspi_Runtime(), gpi.Gaspi_Context() as gaspi_context, gpi.Gaspi_Segment(10):
-#print( "Runtime available: %r"%gpi.isRuntimeAvailable() )
-#print("My Rank is %d"%(gaspi_context.getRank()) )
+# check if runtime initialized correctly
+gaspi_printf( "Gaspi runtime available: %r"%Gpi.isRuntimeAvailable() )
 
 # test for barrier
-gaspi_context.barrier()
-
+if myRank==0:
+    gaspi_printf("The following messages should appear in 1 sec intervalls.")
 for i in range(10):
     if myRank==0:
         time.sleep(1)
     gaspi_context.barrier()
     gaspi_printf("Rank %02d synchronized in iteration %02d"%(myRank, i))
+
+if myRank==0:
+    print("+++PASSED+++")

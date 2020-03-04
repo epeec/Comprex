@@ -110,11 +110,12 @@ def main():
             test_data,
             test_labels,
             batch_size = 128,
-            verbose = 1)
+            verbose = 1 if myRank==0 else 0)
         # Print the model's accuracy
         gaspi_printf("Test accuracy: %.2f"%(accuracy))
 
 if __name__ == "__main__":
     main()
+    # TODO: for now, there is an explicit cleanup order required
     del pyGPI.gaspi_segment
     del pyGPI.gaspi_runtime

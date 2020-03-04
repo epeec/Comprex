@@ -1,10 +1,8 @@
 #Create the pyGPI library.
 # The extension is already found. Any number of sources could be listed here.
 add_library ( PyGPI SHARED
-    #ETI.cpp
     ComprEx_C.cpp
     GPI_C.cpp
-    GaspiEx_C.cpp
  )
  target_link_libraries(PyGPI
         GaspiCxx
@@ -12,8 +10,6 @@ add_library ( PyGPI SHARED
         pthread
         ibverbs
 		rt)
-#${GASPI_CXX_ROOT}/src/libGaspiCxx.a
-#${GPI2_LIBRARIES}
 
 # Make sure the compiler can find include files for our Hello library
 # when other libraries or executables link to Hello

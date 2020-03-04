@@ -1,11 +1,10 @@
 #!/bin/bash -i
 
+# change current directory to 'LeNet' 
 cd /home/loroch/PROJECTS/tensorflow-gpi/LeNet
-#source /home/loroch/.bashrc
 
+# If required, set up the environment
 conda activate tensorflow-1.12
-#export PATH=${PATH}:/opt/cuda/cuda_9/bin:opt/cuda/include
 
-#echo `hostname` $LD_LIBRARY_PATH
-#kernprof -v -l -o `hostname`.prof main.py
+# start the DNN training and evaluation
 python main.py

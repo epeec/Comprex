@@ -167,7 +167,6 @@ protected:
         for(int i=0; i<size; ++i){
             output[i] = vect[i];
         }
-        // *output = dynamic_cast<const CompressedVectorNone<VarTYPE>*>(input)->getVect();
     }
 }; //class Compressor
 
@@ -236,27 +235,23 @@ protected:
         // -------------------------------------------------------
         for(int i = 1; i < input->size(); i++) {
             if( (*input)[i] != static_cast<VarTYPE>(0) ) { // add element to compressed vector
-                //_shrinkedVect[_shrinkedSize] = _restsVector[i];
-                //ComprEx<VarTYPE>::_shrinkedVect.push_back(ComprEx<VarTYPE>::_restsVector[i]);         
+         
                 compressedVector[compressedVectorPos++] = (*input)[i];
 
-                //if(crrRunLength_yes >= 0) { // the previous number was an "yes"-number
-                crrRunLength_yes++; // Then just increase the counter
-                //}
+                crrRunLength_yes++;
+
                 if(crrRunLength_no > 0) {  //the previous number was a "no"-number 
-                // write the current "no"-length in _auxInfoVect[] 
-                // and increase the counter 
-                auxInfoVect.push_back(crrRunLength_no);
-                //increase the check-counter (evntl. optional)
-                check_cntr += crrRunLength_no;
-                // set crrRunLength_no to ZERO
-                crrRunLength_no = 0;
-                } // if(crrRunLength_no > 0)
+                    // write the current "no"-length in _auxInfoVect[] 
+                    // and increase the counter 
+                    auxInfoVect.push_back(crrRunLength_no);
+                    //increase the check-counter (evntl. optional)
+                    check_cntr += crrRunLength_no;
+                    // set crrRunLength_no to ZERO
+                    crrRunLength_no = 0;
+                }
             }
             else {  // skip zeros
-                //if(crrRunLength_no >= 0) {    // the previous number was a "no"-number
-                    crrRunLength_no++;         // Then just increase the counter
-                //}
+                crrRunLength_no++;         // Then just increase the counter
                 if(crrRunLength_yes > 0) {//the previous number was an "yes"-number 
                     // write the current "yes"-length in _auxInfoVectr[] 
                     // (it should be != 0) and increase the counter 
@@ -267,7 +262,7 @@ protected:
                     crrRunLength_yes=0;
                 }
             }
-        } //for(int i;...)
+        }
 
         // push_back the last (still not stored) sequence
         if( (crrRunLength_yes > 0) && (crrRunLength_no == 0)) {
@@ -283,14 +278,10 @@ protected:
         
         // check here if the sum of _auxInfoVectr[]-items 
         // equals the original size, if not -> throw
-        // May leave this check, it is not "expensive"
         assert(check_cntr != input->size());
-        /*
-        if(check_cntr != input_size()) {
-            throw std::runtime_error ("The sum of run-length-vector entries NOT equal orig. vect. size");
-        }*/
+
         *output = std::unique_ptr<CompressedVectorRLE<VarTYPE> >{ new CompressedVectorRLE<VarTYPE>(original_size, signum, auxInfoVect, compressedVector)};
-    } // compression_strategy
+    }
 
 
     virtual void decompression_strategy(VarTYPE* output, int size, const CompressedVector<VarTYPE>* input) {
@@ -300,8 +291,6 @@ protected:
         int original_size = input_RLE_p->get_original_size();
         const std::vector<int>* auxInfoVect_p = input_RLE_p->get_auxInfoVect_p();
         const std::vector<VarTYPE>* compressedVect_p = input_RLE_p->get_compressedVect_p();
-        // decompressed vector
-        // output->resize(original_size);
 
         // decompression statistics
         int cntr_orig = 0;
@@ -320,7 +309,6 @@ protected:
         while (cntr_orig < original_size) {
             // "yes"-items
             for(int i = cntr_orig; i < cntr_orig + (*auxInfoVect_p)[cntr_runLengths]; i++) {
-                //if(cntr_comprs == _shrinkedSize) throw;
                 (output)[i] = (*compressedVect_p)[cntr_comprs];
                 cntr_comprs++;
             }
@@ -335,7 +323,7 @@ protected:
             cntr_orig += (*auxInfoVect_p)[cntr_runLengths];
             cntr_runLengths++;
         }
-    } // decompression_strategy
+    }
 
 };
 

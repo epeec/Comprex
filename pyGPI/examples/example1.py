@@ -1,10 +1,8 @@
 import sys
 sys.path.append('..')
 import ComprEx as comprex
-from GaspiEx import GaspiEx
 import Gpi as gpi
 from Gpi import gaspi_printf
-import ctypes
 import numpy as np
 
 def print_vector(label, array):
@@ -14,13 +12,18 @@ def print_vector(label, array):
     string = string[:-2] + "]\n"
     gaspi_printf(string)
 
-
-
+###########################################
+# Parameters
 # number of elements in array
 size = 50
 
 # number of send/receive cycles
 num_runs = 3
+
+# topK value for compression
+topK = 0.001
+###########################################
+
 
 # define GASPI roles
 srcRank = 0
@@ -32,32 +35,25 @@ tag = 1
 # initialize GASPI
 gaspi_runtime = gpi.Gaspi_Runtime.create()
 
-
-# gaspi_context = gpi.Gaspi_Context()
 with gpi.Gaspi_Context() as gaspi_context:
     print("Transmit values from rank 0 to rank 1. Rank 1 accumulates values.")
     print("Use Gaspi Logger to intermediate outputs. Start it with \'gaspi_logger&\' in your console.")
 
     # get local rank
     myRank = gaspi_context.getRank()
-    print( "Rank %d of %d"%(myRank, gaspi_context.getSize()) )
 
     # getting memory for GASPI
     gaspi_segment = gpi.Gaspi_Segment(2**30) # 1 GB
     # create threshold
-    threshold = comprex.ThresholdTopK(0.001)
-    gaspi_printf("Using ThresholdTopK")
+    threshold = comprex.ThresholdTopK(topK)
 
     # create compressor
     compressor = comprex.CompressorRLE()
-    gaspi_printf("Using CompressorRLE")
 
     # create Comprex
     cmprex = comprex.Comprex(gaspi_runtime, gaspi_context, gaspi_segment, size)
     cmprex.setThreshold(threshold)
     cmprex.setCompressor(compressor)
-    gaspi_printf("Building comprex")
-
 
     # set connection pattern
     if myRank==srcRank:
@@ -72,6 +68,7 @@ with gpi.Gaspi_Context() as gaspi_context:
     for i in range(size):
         values[i] = i * (1-2*(i%2))
 
+    # create receive and gold result arrays on destination rank
     if(myRank == destRank):
         # create buffer for accumulation
         accu = np.ndarray([size], dtype=np.float32)
@@ -110,15 +107,15 @@ with gpi.Gaspi_Context() as gaspi_context:
         # ------------------------------------------------------------
         if(myRank == destRank):
             # get Data from sender
-            #gaspi_printf("Dest Rank receiving")
             rxVect = cmprex.readRemote()
             print_vector("Received Vector:", rxVect)
+            # add received vector to result vector
             for i in range(size):
                 accu[i] += rxVect[i]
 
         gaspi_context.barrier()
 
-    # check if transmitted values add up to correct values:
+    # check if transmitted values add up to correct values
     if(myRank == destRank):
         errors=0
         for i in range(size):
@@ -134,8 +131,8 @@ with gpi.Gaspi_Context() as gaspi_context:
             print("expected:")
             print(gold_result)
 
+    # TODO: make cleanup sequence in Python automatic
     del gaspi_segment
-
 del gaspi_runtime
 print("Done.")
 

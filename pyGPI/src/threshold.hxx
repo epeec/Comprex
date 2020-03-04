@@ -131,7 +131,6 @@ protected:
             _threshold = std::abs(maximum)+1;
         }
         else {
-            // std::sort(vec_copy.begin(), vec_copy.end(), [](VarTYPE x1,VarTYPE x2){return std::abs(x1) > std::abs(x2);} );
             std::nth_element (vec_copy.begin(), vec_copy.begin()+topk_pos, vec_copy.end(), [](VarTYPE x1,VarTYPE x2){return std::abs(x1) > std::abs(x2);});
             _threshold = std::abs((vec_copy)[topk_pos]);
         } 

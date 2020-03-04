@@ -1,21 +1,40 @@
 cmake_minimum_required (VERSION 3.6)
 project (PyGPI)
 
+###############################################################
+### USER SECTION
+### MODIFY THIS SECTION ACCORDINGLY
+
 set (BASE_DIR "/home/loroch/PROJECTS")
 
+# the googletest directory
 set (GTEST_ROOT "${BASE_DIR}/googletest")
-set (GASPI_CXX_ROOT "${BASE_DIR}/GaspiCxx")
-set (COMPREX_ROOT "${CMAKE_SOURCE_DIR}")
 
-include(GNUInstallDirs)
+# the GaspiCxx directory
+set (GASPI_CXX_ROOT "${BASE_DIR}/GaspiCxx")
 
 # switch for enabling unit tests. GTEST_ROOT directory
 # needs to be set.  default: ON
 set (Test OFF)
-set (PROFILE ON)
 
-# set (PYTHON /m/soft/python/3.6.3/bin/python3)
-#set (PYTHON python)
+# enable profiling of C++ code
+set (PROFILE OFF)
+
+# OPTIONAL: add GPI2 explicitely
+# if the GPI-2 does not appear in your PKG_CONFIG_PATH environment variable, then set
+# the environment variable $PKG_CONFIG_PATH in the row below
+# set(ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:<your_path_to_GPI-2>/lib64/pkgconfig")
+
+# OPTIONAL: change installation directory of comprex
+# the default installation directory is /build
+set (CMAKE_INSTALL_DIR "${CMAKE_SOURCE_DIR}/build")
+
+###############################################################
+
+set (COMPREX_ROOT "${CMAKE_SOURCE_DIR}")
+
+include(GNUInstallDirs)
+
 execute_process(COMMAND which python OUTPUT_VARIABLE PYTHON)
 string(STRIP ${PYTHON} PYTHON)
 
@@ -34,11 +53,6 @@ if(PROFILE)
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg -g")
     set (CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -pg -g")
 endif()
-
-# add GPI2
-# if GPI-2 has NOT been loaded as a module, then set appropriately
-# the environment variable $PKG_CONFIG_PATH in the row below
-#set(ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:/u/l/loroch/PROGRAMMING/GPI-2-eth/pkgconfig")
 
 FIND_PACKAGE(PkgConfig)
 PKG_CHECK_MODULES(GPI2 REQUIRED GPI2>=1.3.0)
