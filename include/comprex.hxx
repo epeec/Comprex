@@ -10,17 +10,18 @@
 #include <fstream>
 #include <memory>
 #include <cstring>
+#include <algorithm>
 
 
-#include <GaspiCxx/GaspiCxx.hpp>
+#include  <GaspiCxx/GaspiCxx.hpp>
 
 #include <mThrRLEcompress.hxx>
+#include <mThrTopKcompress.hxx>
 
 #ifndef COMPREX_H
 #define COMPREX_H
 
 namespace compressed_exchange {
-
 
   // compression type
   enum class CompressionType {
@@ -76,6 +77,11 @@ namespace compressed_exchange {
        std::size_t _buffSizeBytes;
 
 
+       // pin_pattern, number of threads, in case of a multi-threaded compression
+       int _nThreads;
+       const int* _pinPattern;
+       std::unique_ptr< pthread_t [] >  _pThreads;
+
        // check if (_origVector[i] + _restsVector[i]) > _treshold;
        virtual bool checkFulfilled_forItem(int i);
 
@@ -120,9 +126,14 @@ namespace compressed_exchange {
               , gaspi::Context & context
 	      , gaspi::segment::Segment & segment
 	      , int origSize   // size of the vectors to work with
+	      , int nThreads = 1
+	      , const int* _pinPattern = NULL
 	       );
 
       ~ComprEx();
+
+      virtual int rank() const {
+          return static_cast<int>(_gpiCxx_context.rank().get());}
 
       virtual void flushTheRestsVector();
       virtual const VarTYPE * entryPointerRestsVector() const;
@@ -142,6 +153,10 @@ namespace compressed_exchange {
      
       virtual  const VarTYPE getTreshold() const;
             
+      virtual void setPinPatternForTheThreads(
+		       //int nThtreads,       // number of threads per rank
+                       std::unique_ptr<int []> const & pinPattern); // pin pattern
+
       virtual void compress_and_p2pVectorWriteRemote(
 	       std::unique_ptr<VarTYPE []> const & vector // pointer to src vector
 	       , VarTYPE treshold             // treshold
@@ -209,10 +224,79 @@ namespace compressed_exchange {
 
 
   template <class VarTYPE>
+  class ComprExTopK: public ComprEx<VarTYPE> {
+
+    private:
+ 
+      // counter of the current p2p-send-call after intantiating the class
+      int _crrWriteCall;
+
+      std::unique_ptr< MultiThreadedTopK<VarTYPE> > _mThrTopK;
+
+      // work-vector
+      std::vector<PairIndexValue<VarTYPE> > _vectPairs;
+
+      static bool sortPredicate_absValue(const PairIndexValue<VarTYPE> & obj1, 
+			                 const PairIndexValue<VarTYPE> & obj2)
+      {
+	return std::abs(obj1.val) > std::abs(obj2.val);
+      }
+
+    
+      void calculateNumberOfItemsToSend(VarTYPE topK_percents);
+      void fillIn_absValuesVector_and_sort(); 
+      void calculateSizeSourceBuffer();
+
+      void compressVectorSingleThreaded(
+            std::unique_ptr<VarTYPE []> const & vector // pointer to the vector
+	  , VarTYPE topK_percents);      // the top K-percents,  the value of K
+     
+      void fillInSourceBuffer(
+		       gaspi::singlesided::write::SourceBuffer &srcBuff);
+
+      void inRestsVectorSetToZeroTheItemsJustSent();
+
+      void deCompressVector_inLocalStructs(
+			gaspi::singlesided::write::TargetBuffer &targBuff);
+     
+      void fillInVectorFromLocalStructs(
+			 std::unique_ptr<VarTYPE []> & vector);
+
+    public:
+
+      ComprExTopK( gaspi::Runtime & runTime
+                   , gaspi::Context & context
+	           , gaspi::segment::Segment & segment
+	           , int origSize   // size of the vectors to work with
+                   , int nThreads = 1
+	           , const int* pinPattern = NULL
+                 );
+
+      ~ComprExTopK();
+   
+      void printCompressedVector_inOriginalSize(const char *fullPath) const {};
+
+      void printAuxiliaryInfoVector(const char *fullPath) const; // base-class function
+    //void printIndexValuePairsVector(int itr, const char *fullPath) const;
+
+      const struct PairIndexValue<VarTYPE> *
+                      entryPointerVectorPairs()  const;
+      
+      void compress_and_p2pVectorWriteRemote(
+	       std::unique_ptr<VarTYPE []> const & vector // pointer to the vector
+	       , VarTYPE topK_percents        // top K-percents of the items to be transferred
+	       , gaspi::group::Rank  destRank// destination rank
+               , int tag);                     // message tag      
+
+ }; // class ComprExTopK
+
+
+  template <class VarTYPE>
   class ComprExSparseIdx : public ComprEx<VarTYPE> {
     // ...
 
   };//class ComprExSparseIdx 
+
 
 }  // end namespace compressed_exchange
 
@@ -220,5 +304,7 @@ namespace compressed_exchange {
 #include <comprex.cxx>
 #include <runLenComprEx.cxx>
 #include <mThrRLEcompress.cxx>
+#include <topKcomprEx.cxx>
+#include <mThrTopKcompress.cxx>
 
 #endif // #define COMPREX_H

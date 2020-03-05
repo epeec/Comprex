@@ -93,7 +93,7 @@ main(int argc, char* argv[])
       if(i % 2 == 0) pinPattern[i] = i*2;
       if(i % 2 == 1) pinPattern[i] = i;
     }
-    //cmprex_int.setPinPatternForTheThreads(nCores, pinPattern);
+    cmprex_int.setPinPatternForTheThreads(pinPattern);
 
  
     // start three compress-and-exchange sweeps between src and dest rank

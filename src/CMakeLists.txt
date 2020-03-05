@@ -4,6 +4,8 @@ add_library ( ComprEx
     comprex.cxx
     runLenComprEx.cxx
     mThrRLEcompress.cxx
+    topKcomprEx.cxx
+    mThrTopKcompress.cxx
     ETI.cpp
  )
 

@@ -22,6 +22,7 @@ namespace compressed_exchange {
     , _glb_shrinkedVect(glbShrinkedVect)
     , _glb_runLengthsVect(glbRunLengthsVect)  
     , _numThreads(nThreads)
+      , _pinPattern()
       , _startIdx_thr()
       , _signumFlag_thr()
       , _runLengthsVectSize_thr()
@@ -70,6 +71,21 @@ namespace compressed_exchange {
     _startIdx_thr[_numThreads] = _origSize;
 
   }  
+
+  template <class VarTYPE>
+  void
+  MultiThreadedRLE<VarTYPE>::setPinPatternForTheThreads(
+	    int nThreads,       // number of threads per rank
+            const int * pinPattern) // pin pattern
+  {
+    if(_numThreads != nThreads) {
+      printf("\n Inconsistent number of threads when seeting the pin pattern !!\n");
+      throw;
+    }
+    _pinPattern = pinPattern;
+
+  }
+
 
   template <class VarTYPE>
   void

@@ -13,10 +13,7 @@ set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DETI_DOUBLE -DETI_INT -Wall -Wextra -p
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse")
 set (GTEST_ROOT "path-to-gtest")
 
-# NOTE: one needs to provide a proper path here
 set (GASPI_CXX_ROOT "${PROJECT_SOURCE_DIR}")
-
-set (CMAKE_SHARED_LINKER_FLAGS "-Wl")
 
 # add GPI2
 # if GPI-2 has NOT been loaded as a module, then set appropriately 
@@ -25,6 +22,8 @@ set(ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:$ENV{GASPI_HOME}/lib64/pkgconfig
 
 FIND_PACKAGE(PkgConfig)
 PKG_CHECK_MODULES(GPI2 REQUIRED GPI2>=1.3.0)
+include_directories ( ${GPI2_INCLUDE_DIRS} )
+link_directories ( ${GPI2_LIBRARY_DIRS} )
 
 include_directories (
         ${GPI2_INCLUDE_DIRS} 

@@ -43,8 +43,9 @@ namespace compressed_exchange {
        // - vector containing the  indices of the non-zeros, in sparse-indexing 
        std::vector<int>  &  _glb_runLengthsVect; // global RLE-sequence 
 
-       // number of threads
+       // number of threads, pin_pattern
        int _numThreads;
+       const int* _pinPattern;
 
        //  thread-local structures
        //
@@ -66,6 +67,12 @@ namespace compressed_exchange {
        // array of shrinked-vectors, one vector per each thread
        std::unique_ptr< std::vector<VarTYPE> [] > _shrinkedVect_thr;
        
+       //const int* _pinPattern; // [_numThreads], pin pattern   
+       //void pinnThisThread(int gpiRank, int threadID, int coreId);
+       //void setThreadParameters_compressVectorVhunk(gaspi_rank_t rank, int threadID);
+
+       //static void* threadRoutine_compressVectorChunk(void *arg);
+
        void allocateThreadRelatedArrays();
        void partitionTheOriginalVector();
 
@@ -82,6 +89,11 @@ namespace compressed_exchange {
 		     );
 
      ~MultiThreadedRLE();
+
+     void setPinPatternForTheThreads(
+	    int nThreads,       // number of threads per rank
+            const int * pinPattern); // pin pattern
+
 
     void compress( int & shrinkedVectSize, 
                    int & runLengthsVectSize);
