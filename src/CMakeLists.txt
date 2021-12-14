@@ -1,25 +1,27 @@
-#Create the ComprEx library.
-# The extension is already found. Any number of sources could be listed here.
-add_library ( ComprEx
-    comprex.cxx
-    runLenComprEx.cxx
-    mThrRLEcompress.cxx
-    topKcomprEx.cxx
-    mThrTopKcompress.cxx
-    ETI.cpp
- )
+#Create the pyGPI library.
 
-# Make sure the compiler can find include files for our Hello library
-# when other libraries or executables link to Hello
-message ("crr source dir is ${CMAKE_CURRENT_SOURCE_DIR}")
-target_include_directories (ComprEx
-	PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../include 
+add_library ( PyGPI SHARED
+    comprEx_C.cpp
+    GPI_C.cpp
+    gaspiEx_C.cpp
+    allreduce_C.cpp
+ )
+ target_link_libraries(PyGPI
+        GaspiCxx
+        GPI2::GPI2
+        )
+target_include_directories(PyGPI PUBLIC ${GASPI_CXX_INCLUDE_DIR})
+target_link_directories(PyGPI PUBLIC ${GASPI_CXX_LINK_DIR})
+
+target_include_directories (PyGPI
+	PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../include
 	       ${CMAKE_CURRENT_SOURCE_DIR} )
 
-## dms install the library, just an example, leave it for later on
-## 'make install' to the correct locations (provided by GNUInstallDirs).
-install(TARGETS ComprEx EXPORT
+
+install(TARGETS PyGPI EXPORT
 	ARCHIVE  DESTINATION ${CMAKE_INSTALL_DIR}/lib
 	LIBRARY  DESTINATION ${CMAKE_INSTALL_DIR}/lib)
-install(DIRECTORY ../include DESTINATION ${CMAKE_INSTALL_DIR})
 
+if(BUILD_TFOPS)
+    add_subdirectory (tf_ops)
+endif()

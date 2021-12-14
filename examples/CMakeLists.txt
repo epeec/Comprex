@@ -1,30 +1,60 @@
-#add executable called "example0" that is built from the source file
-# "example.cxx". The extensions are automatically found.
-add_executable (example0 example0.cpp)
-add_executable (example1 example1.cpp)
+# Example gaspiEx
+add_executable (example_gaspiEx_c gaspiEx.cpp)
+target_include_directories(example_gaspiEx_c PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries (example_gaspiEx_c
+                LINK_PUBLIC "-static-libstdc++"
+			   	GaspiCxx
+			    GPI2::GPI2
+			   	pthread
+			   	rt)
+add_custom_target(run_example_gaspiEx_c
+			   gaspi_run -m ${CMAKE_BINARY_DIR}/nodelist ${CMAKE_BINARY_DIR}/examples/example_gaspiEx_c)
 
-message(" crr src dir:  ${CMAKE_CURRENT_SOURCE_DIR}")
-target_include_directories (example0 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_include_directories (example1 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+# Example comprEx
+add_executable (example_comprEx_c comprEx.cpp)
+target_include_directories(example_comprEx_c PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries (example_comprEx_c
+                LINK_PUBLIC "-static-libstdc++"
+			   	GaspiCxx
+			   	GPI2::GPI2
+			   	pthread
+			   	rt)
+add_custom_target(run_example_comprEx_c
+			   gaspi_run -m ${CMAKE_BINARY_DIR}/nodelist ${CMAKE_BINARY_DIR}/examples/example_comprEx_c)
 
-# Link the executable to the Hello library. Since the Hello library has
-# public include directories we will use those link directories when building
-# helloDemo
+# Example allreduce_speed
+add_executable (example_allreduce_speed_c allreduce_speed.cpp)
+target_include_directories(example_allreduce_speed_c PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries (example_allreduce_speed_c
+                LINK_PUBLIC "-static-libstdc++"
+			   	GaspiCxx
+			   	GPI2::GPI2
+            	)
+add_custom_target(run_example_allreduce_speed_c
+			   gaspi_run -m ${CMAKE_BINARY_DIR}/nodelist ${CMAKE_BINARY_DIR}/examples/example_allreduce_speed_c)
 
-target_link_libraries (example0 
-                           LINK_PUBLIC "-static-libstdc++"
-                           ComprEx 
-			   GaspiCxx
-			   ${GPI2_LIBRARIES} 
-			   pthread 
-                           ibverbs
-			   rt)
+# Example comprex_speed
+add_executable( example_comprex_speed_c comprex_speed.cpp )
+target_include_directories (example_comprex_speed_c PRIVATE ${COMPREX_SRC})
+target_link_libraries (example_comprex_speed_c
+                LINK_PUBLIC "-static-libstdc++"
+			    GaspiCxx
+			    GPI2::GPI2
+			    pthread
+                rt)
+add_custom_target(run_example_comprex_speed_c
+               gaspi_run -m ${CMAKE_BINARY_DIR}/nodelist ${CMAKE_BINARY_DIR}/examples/example_comprex_speed_c)
 
-target_link_libraries (example1 
-                           LINK_PUBLIC "-static-libstdc++"
-                           ComprEx 
-			   GaspiCxx
-			   ${GPI2_LIBRARIES} 
-			   pthread 
-                           ibverbs
-			   rt)
+# Example Python gaspiEx
+set (TESTNAME example_gaspiEx_py) 
+file(WRITE ${COMPREX_BUILD}/${TESTNAME}.sh "#!/bin/bash -i\nconda activate ${CONDA_ENVIRONMENT}\ncd ${CMAKE_SOURCE_DIR}/build\n${PYTHON} ${COMPREX_ROOT}/examples/gaspiEx.py")
+execute_process( COMMAND chmod +x ${COMPREX_BUILD}/${TESTNAME}.sh )
+add_custom_target(run_${TESTNAME}
+               gaspi_run -m ${CMAKE_BINARY_DIR}/nodelist ${COMPREX_BUILD}/${TESTNAME}.sh)
+
+# Example Python comprEx
+set (TESTNAME example_comprEx_py) 
+file(WRITE ${COMPREX_BUILD}/${TESTNAME}.sh "#!/bin/bash -i\nconda activate ${CONDA_ENVIRONMENT}\ncd ${CMAKE_SOURCE_DIR}/build\n${PYTHON} ${COMPREX_ROOT}/examples/comprEx.py")
+execute_process( COMMAND chmod +x ${COMPREX_BUILD}/${TESTNAME}.sh )
+add_custom_target(run_${TESTNAME}
+               gaspi_run -m ${CMAKE_BINARY_DIR}/nodelist ${COMPREX_BUILD}/${TESTNAME}.sh)
